@@ -1,5 +1,16 @@
 const pool = require('../config/database');
 
+// Function to get all posts
+exports.getAllPosts = async () => {
+    try {
+        const sql = 'SELECT * FROM posts';
+        const [rows] = await pool.query(sql);
+        return rows;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+};
+
 // Function to create a new post
 exports.createPost = async (userId, caption, media) => {
     try {
