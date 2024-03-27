@@ -4,16 +4,22 @@ const authenticateToken = require('../middlewares/verifyToken');
 const postController = require('../controllers/postController');
 
 // Route to create a new post
-router.post('/post', authenticateToken, postController.createPost);
+router.post('/createPost', authenticateToken, postController.createPost);
+
+// Route to get a single post 
+router.get('/:id', authenticateToken, postController.getSinglePost);
 
 // Route to get all posts
-router.get('/posts', authenticateToken, postController.getPosts);
+router.get('/', authenticateToken, postController.getAllPosts);
 
-// Route to get single post 
-router.get('/posts/:id', authenticateToken, postController.getPost);
+// Route to get all posts of a specific user
+router.get('/user/:id', authenticateToken, postController.getPostsByUser);
 
-// Route to Get users all posts 
-router.get('/posts/user/:id', authenticateToken, postController.getUserPosts);
+// Route to update a post
+router.put('/:id', authenticateToken, postController.updatePostById)
+
+// Route to delete a post
+router.delete('/:id', authenticateToken, postController.deletePostById);
 
 // Other routes for updating, deleting, and retrieving posts can be added here
 

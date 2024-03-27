@@ -171,7 +171,6 @@ exports.login = async (req, res) => {
 
         // Invalidate previous session if exists
         if (activeSessions[user.id]) {
-            console.log(`token already exists: ${user.id}`);
             delete activeSessions[user.id]; // Invalidate previous session
         }
 
