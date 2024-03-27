@@ -12,6 +12,9 @@ router.get('/posts', authenticateToken, postController.getPosts);
 // Route to get single post 
 router.get('/posts/:id', authenticateToken, postController.getPost);
 
+// Route to Get users all posts 
+router.get('/posts/user/:id', authenticateToken, postController.getUserPosts);
+
 // Other routes for updating, deleting, and retrieving posts can be added here
 
 module.exports = router;
