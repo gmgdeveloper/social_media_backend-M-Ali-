@@ -3,6 +3,7 @@ const express = require("express");
 const app = express(); // Initialize app
 const db = require('./config/db'); // Require your database pool configuration
 const env = require('dotenv'); // Require environment variables
+const cors = require('cors')
 
 // Load environment variables
 env.config();
@@ -15,6 +16,7 @@ const postRoutes = require("./routes/postRoutes");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
+app.use(cors());
 
 // Routes 
 app.use("/api", userRoutes);

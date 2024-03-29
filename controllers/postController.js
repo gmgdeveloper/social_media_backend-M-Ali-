@@ -178,15 +178,41 @@ exports.getPostsByUser = async (req, res) => {
 exports.updatePostById = async (req, res) => {
     try {
         const postId = req.params.id;
-        const { caption } = req.body;
-        const media = req.file ? req.file.path : null;
-        const updatedPost = await postModel.updatePost(postId, caption, media);
-        res.status(200).json({
-            status: 200,
-            message: 'Post updated successfully',
-            post: updatedPost
-        });
+        let updatedPost;
 
+        // Initialize an object to store the fields to be updated
+        const updateFields = {};
+
+        // Check if a file is uploaded
+        upload(req, res, async (err) => {
+            if (err) {
+                console.error('Error uploading file:', err);
+                return res.status(400).json({
+                    status: 400,
+                    error: err.message
+                });
+            }
+
+            // Check if a caption is provided
+            const { caption } = req.body;
+            if (caption !== undefined) {
+                updateFields.caption = caption;
+            }
+
+            // Check if a file is uploaded
+            if (req.file) {
+                updateFields.media = req.file.path;
+            }
+
+            // Call the model function to update the post with the provided fields
+            updatedPost = await postModel.updatePost(postId, updateFields);
+
+            res.status(200).json({
+                status: 200,
+                message: 'Post updated successfully',
+                post: updatedPost
+            });
+        });
     } catch (error) {
         console.error('Error updating post:', error);
         res.status(500).json({
@@ -196,16 +222,68 @@ exports.updatePostById = async (req, res) => {
     }
 }
 
+
+
 // Controller function to delete post by id
 exports.deletePostById = async (req, res) => {
     try {
         const postId = req.params.id;
-        const deletedPost = await postModel.deletePost(postId);
-        res.status(200).json({
-            status: 200,
-            message: 'Post deleted successfully',
-            post: deletedPost
-        });
+        const userId = req.user.id; // Assuming the authenticated user ID is stored in req.user.id
+        const userRole = req.user.role; // Assuming the authenticated user role is stored in req.user.role
+
+        // Retrieve the post from the database
+        const post = await postModel.getPostById(postId);
+
+        // Check if the post exists
+        if (!post) {
+            return res.status(404).json({
+                status: 404,
+                error: 'Post not found'
+            });
+        }
+
+        // Check if the authenticated user is an admin
+        if (userRole === 'admin' && req.user.is_admin === 1) {
+            // Admin user can delete any post
+            const deleteResult = await postModel.deletePost(postId);
+            if (deleteResult.status === 200) {
+                return res.status(deleteResult.status).json({
+                    status: deleteResult.status,
+                    message: 'Post deleted successfully'
+                });
+            } else {
+                return res.status(deleteResult.status).json({
+                    status: deleteResult.status,
+                    error: deleteResult.error || 'Internal server error'
+                });
+            }
+        }
+
+        // Check if the authenticated user is the owner of the post
+        if (post.user_id !== userId) {
+            return res.status(403).json({
+                status: 403,
+                error: 'You are not authorized to delete this post'
+            });
+        }
+
+        // Call the model function to delete the post
+        const deleteResult = await postModel.deletePost(postId);
+
+        // Check the status returned by the model function
+        if (deleteResult.status === 200) {
+            // Post deleted successfully
+            res.status(deleteResult.status).json({
+                status: deleteResult.status,
+                message: 'Post deleted successfully'
+            });
+        } else {
+            // Handle other status codes returned by the model function
+            res.status(deleteResult.status).json({
+                status: deleteResult.status,
+                error: deleteResult.error || 'Internal server error'
+            });
+        }
     } catch (error) {
         console.error('Error deleting post:', error);
         res.status(500).json({
@@ -213,4 +291,4 @@ exports.deletePostById = async (req, res) => {
             error: `Internal server error: ${error.message}`
         });
     }
-}
+};

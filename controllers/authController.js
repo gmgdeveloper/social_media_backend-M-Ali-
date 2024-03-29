@@ -38,11 +38,7 @@ const loginSchema = Joi.object({
     password: Joi.string().min(8).required()
 });
 
-
-// Controller function for user login
 const activeSessions = {}; // Object to store active session tokens
-
-
 
 // Controller function for user registration
 exports.register = async (req, res) => {
@@ -118,12 +114,13 @@ exports.register = async (req, res) => {
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '6h' });
 
         // Set token and user_id in the response headers
-        res.setHeader('Authorization', `Bearer ${token}`);
+        res.setHeader('Authorization', `${token}`);
 
         // Send success response with user data
         res.status(201).json({
             status: 200,
             message: 'User registered successfully',
+            token: token,
             user: payload
         });
 
@@ -137,7 +134,7 @@ exports.register = async (req, res) => {
     }
 }
 
-
+// Controller function for login
 exports.login = async (req, res) => {
     // Validate request body against the schema
     const { error } = loginSchema.validate(req.body);
@@ -177,11 +174,13 @@ exports.login = async (req, res) => {
         // Generate JWT token for the user
         const payload = {
             id: user.id,
-            username: user.username,
+            first_name: user.first_name,
+            last_name: user.last_name,
             full_name: user.full_name,
-            bio: user.bio,
-            profile_picture: user.profile_picture,
             email: user.email,
+            bio: user.bio,
+            username: user.username,
+            profile_picture: user.profile_picture,
             role: user.role,
             is_admin: user.is_admin
         };
@@ -192,13 +191,14 @@ exports.login = async (req, res) => {
         activeSessions[user.id] = token;
 
         // Set token in the response headers
-        res.setHeader('Authorization', `Bearer ${token}`)
+        res.setHeader('Authorization', `${token}`)
 
         // Send success response without including token in the body
         res.status(200).json({
             status: 200,
             message: 'Login successful.',
-            user: payload // Optionally, you can still include user data in the response body
+            token: token,
+            user: payload
         });
     } catch (error) {
         console.error('Error logging in user:', error);
@@ -211,7 +211,7 @@ exports.login = async (req, res) => {
 
 
 
-// Controller function for user logout // Controller function for user logout 
+// Controller function for user logout 
 exports.logout = async (req, res) => {
     try {
         // Clear token from headers or cookies or wherever it's stored 

@@ -60,11 +60,33 @@ exports.getAllPostsByUserId = async (userId) => {
 };
 
 // Function to update a post
-
-exports.updatePost = async (postId, caption, media) => {
+exports.updatePost = async (postId, updateFields) => {
     try {
-        const sql = 'UPDATE posts SET caption =?, media =? WHERE id =?';
-        const [result] = await pool.query(sql, [caption, media, postId]);
+        if (Object.keys(updateFields).length === 0) {
+            throw new Error('No fields provided for update');
+        }
+
+        let sql = 'UPDATE posts SET ';
+        const values = [];
+
+        // Iterate over the fields to be updated and construct the SQL query
+        Object.keys(updateFields).forEach((key, index) => {
+            // Append field and value to the query
+            sql += `${key} = ?`;
+            values.push(updateFields[key]);
+
+            // Add comma if not the last field
+            if (index < Object.keys(updateFields).length - 1) {
+                sql += ', ';
+            }
+        });
+
+        // Add WHERE condition for post ID
+        sql += ' WHERE id = ?';
+        values.push(postId);
+
+        // Execute the update query
+        const [result] = await pool.query(sql, values);
 
         // Check if the post was successfully updated
         if (result.affectedRows < 1) {
@@ -80,23 +102,33 @@ exports.updatePost = async (postId, caption, media) => {
 };
 
 
+
 // Function to delete a post
 exports.deletePost = async (postId) => {
     try {
-        const sql = 'DELETE FROM posts WHERE id =?';
+        const sql = 'DELETE FROM posts WHERE id = ?';
         const [result] = await pool.query(sql, [postId]);
 
         // Check if the post was successfully deleted
         if (result.affectedRows !== 1) {
-            throw new Error('Failed to delete post');
+            return {
+                status: 404,
+                message: 'Post not found or could not be deleted',
+                error: 'Post not found or could not be deleted'
+            };
         }
 
-        // Fetch and return the deleted post
-        const deletedPost = await this.getPostById(postId);
-        return deletedPost;
+        // Post successfully deleted
+        return {
+            status: 200,
+            message: 'Post deleted successfully'
+        };
     } catch (error) {
-        throw new Error(error);
+        console.error('Error deleting post:', error);
+        return {
+            status: 500,
+            message: 'Internal server error',
+            error: error.message
+        };
     }
 };
-
-// Other functions for updating, deleting, and retrieving posts can be added here
