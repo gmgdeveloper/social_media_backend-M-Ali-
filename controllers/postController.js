@@ -222,8 +222,6 @@ exports.updatePostById = async (req, res) => {
     }
 }
 
-
-
 // Controller function to delete post by id
 exports.deletePostById = async (req, res) => {
     try {
@@ -261,8 +259,8 @@ exports.deletePostById = async (req, res) => {
 
         // Check if the authenticated user is the owner of the post
         if (post.user_id !== userId) {
-            return res.status(403).json({
-                status: 403,
+            return res.status(401).json({
+                status: 401,
                 error: 'You are not authorized to delete this post'
             });
         }

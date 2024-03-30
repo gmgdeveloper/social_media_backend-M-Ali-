@@ -7,13 +7,13 @@ const env = require("dotenv")
 env.config(); // Load environment variables
 
 // Define a custom validator function to check if a string is all lowercase
-const isLowerCase = (value, helpers) => {
-    if (value === value.toLowerCase()) {
-        return value; // If the value is all lowercase, return it
-    } else {
-        return helpers.error('any.lowercase');
-    }
-};
+// const isLowerCase = (value, helpers) => {
+//     if (value === value.toLowerCase()) {
+//         return value; // If the value is all lowercase, return it
+//     } else {
+//         return helpers.error('any.lowercase');
+//     }
+// };
 
 // Define Joi schema for user registration
 const registerSchema = Joi.object({
@@ -25,7 +25,6 @@ const registerSchema = Joi.object({
         'any.only': 'Confirm Password must match Password',
         'any.required': 'Confirm Password is required'
     }),
-    // bio: Joi.string().allow('').optional()
 });
 
 
