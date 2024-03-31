@@ -110,7 +110,7 @@ exports.register = async (req, res) => {
         };
 
         // Sign JWT token with secret key and expiration time
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '6h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
 
         // Set token and user_id in the response headers
         res.setHeader('Authorization', `${token}`);
@@ -184,7 +184,7 @@ exports.login = async (req, res) => {
             is_admin: user.is_admin
         };
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '6h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
 
         // Save session token in activeSessions
         activeSessions[user.id] = token;

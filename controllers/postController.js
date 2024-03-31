@@ -65,15 +65,35 @@ exports.createPost = async (req, res) => {
                 });
             }
 
+            // get user id from token
+            const user_id = req.user.id;
+
             // Extract necessary data from the request body
-            const { user_id, caption } = req.body;
+            const { caption, id } = req.body;
             const media = req.file ? req.file.path : null;
 
-            // Validate if all required fields are provided
-            if (!user_id || !caption) {
+            if (user_id != id) {
+                console.log(`user_id: '${user_id}', id: '${id}'.`);
+                return res.status(401).json({
+                    status: 401,
+                    error: 'Unauthorized',
+                    message: `Please Login or register if you don't have an account to perform this action`
+                })
+            }
+
+            // Validate if caption is provided
+            if (!caption) {
                 return res.status(400).json({
                     status: 400,
                     error: 'Please provide caption'
+                });
+            }
+
+            // Validate if media is provided
+            if (!media) {
+                return res.status(400).json({
+                    status: 400,
+                    error: 'Please provide media'
                 });
             }
 
@@ -90,11 +110,10 @@ exports.createPost = async (req, res) => {
         console.error('Error creating post:', error);
         res.status(500).json({
             status: 500,
-            error: 'Internal server error'
+            error: `Internal server error: ${error.message}`
         });
     }
 };
-
 
 // Controller function to get all posts
 exports.getAllPosts = async (req, res) => {
@@ -174,45 +193,80 @@ exports.getPostsByUser = async (req, res) => {
     }
 };
 
-// Controller function update post by id 
+// Controller function to update post by id 
 exports.updatePostById = async (req, res) => {
     try {
         const postId = req.params.id;
-        let updatedPost;
+        console.log(`post_id: ${[postId]}`);
+        // Check if the user is authenticated
+        if (!req.user) {
+            return res.status(401).json({
+                status: 401,
+                error: 'Unauthorized: User not logged in'
+            });
+        }
 
-        // Initialize an object to store the fields to be updated
-        const updateFields = {};
+        // Check if the user is an admin
+        if (req.user.role === 'admin') {
+            // Admin can update any post, proceed with the update
+            updatePost();
+        } else {
+            // User is not an admin, check if the user is the owner of the post
+            const post = await postModel.getPostById(postId);
 
-        // Check if a file is uploaded
-        upload(req, res, async (err) => {
-            if (err) {
-                console.error('Error uploading file:', err);
-                return res.status(400).json({
-                    status: 400,
-                    error: err.message
+            if (!post) {
+                return res.status(404).json({
+                    status: 404,
+                    error: 'Post not found'
                 });
             }
 
-            // Check if a caption is provided
-            const { caption } = req.body;
-            if (caption !== undefined) {
-                updateFields.caption = caption;
+            if (post.user_id !== req.user.id) {
+                // User is not the owner of the post, forbid the update
+                return res.status(401).json({
+                    status: 401,
+                    error: 'Forbidden: You are unauthorized to edit this post'
+                });
             }
 
+            // User is the owner of the post, proceed with the update
+            updatePost();
+        }
+
+        async function updatePost() {
             // Check if a file is uploaded
-            if (req.file) {
-                updateFields.media = req.file.path;
-            }
+            upload(req, res, async (err) => {
+                if (err) {
+                    console.error('Error uploading file:', err);
+                    return res.status(400).json({
+                        status: 400,
+                        error: err.message
+                    });
+                }
+                const { caption } = req.body
+                // Initialize an object to store the fields to be updated
+                const updateFields = {};
 
-            // Call the model function to update the post with the provided fields
-            updatedPost = await postModel.updatePost(postId, updateFields);
+                // Check if a caption is provided
+                if (caption !== undefined) {
+                    updateFields.caption = caption;
+                }
 
-            res.status(200).json({
-                status: 200,
-                message: 'Post updated successfully',
-                post: updatedPost
+                // Check if a file is uploaded
+                if (req.file) {
+                    updateFields.media = req.file.path;
+                }
+
+                // Call the model function to update the post with the provided fields
+                const updatedPost = await postModel.updatePost(postId, updateFields);
+
+                res.status(200).json({
+                    status: 200,
+                    message: 'Post updated successfully',
+                    post: updatedPost
+                });
             });
-        });
+        }
     } catch (error) {
         console.error('Error updating post:', error);
         res.status(500).json({
@@ -221,6 +275,7 @@ exports.updatePostById = async (req, res) => {
         });
     }
 }
+
 
 // Controller function to delete post by id
 exports.deletePostById = async (req, res) => {
