@@ -4,7 +4,8 @@ const authenticateToken = require('../middlewares/verifyToken');
 const likeController = require('../controllers/likeController');
 
 
-router.post('/like/:id', authenticateToken, likeController.likePost);
+router.get('/:id', likeController.getAllLikesOfAPost);
 
+router.post('/like/:id', authenticateToken, likeController.likeAndUnlikePost);
 
 module.exports = router;
