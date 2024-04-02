@@ -14,8 +14,12 @@ exports.getAllPosts = async () => {
 // Function to create a new post
 exports.insertPost = async (userId, caption, media) => {
     try {
-        const sql = 'INSERT INTO posts (user_id, caption, media) VALUES (?, ?, ?)';
-        const [result] = await pool.query(sql, [userId, caption, media]);
+
+        // Get current date icluding hours and minutes
+        const date = new Date();
+        const currentDate = `${date}`;
+        const sql = 'INSERT INTO posts (user_id, caption, media, post_date) VALUES (?, ?, ?, ?)';
+        const [result] = await pool.query(sql, [userId, caption, media, currentDate]);
 
         // Check if the post was successfully created
         if (result.affectedRows < 1) {

@@ -11,6 +11,7 @@ env.config();
 // Import routes 
 const userRoutes = require("./routes/userRoutes");
 const postRoutes = require("./routes/postRoutes");
+const likeRoutes = require("./routes/likeRoutes");
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -21,6 +22,7 @@ app.use(cors());
 // Routes 
 app.use("/api", userRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/likes", likeRoutes);
 
 // Set Up PORT
 const PORT = process.env.PORT || 8080;
