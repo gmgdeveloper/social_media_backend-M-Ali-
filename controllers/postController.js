@@ -73,7 +73,6 @@ exports.createPost = async (req, res) => {
             const media = req.file ? req.file.path : null;
 
             if (user_id != id) {
-                console.log(`user_id: '${user_id}', id: '${id}'.`);
                 return res.status(401).json({
                     status: 401,
                     error: 'Unauthorized',
@@ -197,7 +196,6 @@ exports.getPostsByUser = async (req, res) => {
 exports.updatePostById = async (req, res) => {
     try {
         const postId = req.params.id;
-        console.log(`post_id: ${[postId]}`);
         // Check if the user is authenticated
         if (!req.user) {
             return res.status(401).json({
@@ -307,7 +305,7 @@ exports.deletePostById = async (req, res) => {
             } else {
                 return res.status(deleteResult.status).json({
                     status: deleteResult.status,
-                    error: deleteResult.error || 'Internal server error'
+                    error: deleteResult.error.message || 'Internal server error'
                 });
             }
         }
