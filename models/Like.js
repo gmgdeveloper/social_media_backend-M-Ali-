@@ -4,7 +4,6 @@ exports.getAllLikesOfAPost = async (postId) => {
     try {
         const sql = 'SELECT * FROM likes WHERE post_id = ?';
         const [likes] = await pool.query(sql, [postId]);
-        console.log(likes);
         return likes;
     } catch (error) {
         console.error(error);
@@ -13,6 +12,7 @@ exports.getAllLikesOfAPost = async (postId) => {
             message: 'Something went wrong! It is from our side',
             error: error.message
         }
+        return errMsg;
     }
 };
 
@@ -41,6 +41,7 @@ exports.likePost = async (postId, userId) => {
             message: 'Something went wrong! It is from our side',
             error: error.message
         }
+        return errMsg;
     }
 };
 
@@ -51,7 +52,7 @@ exports.getLikeByUserIdAndPostId = async (userId, postId) => {
         return rows[0];
     } catch (error) {
         console.error('Error retrieving like:', error);
-        throw error;
+        return { status: 500, error: error.message };
     }
 };
 

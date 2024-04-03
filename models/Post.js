@@ -38,17 +38,31 @@ exports.insertPost = async (userId, caption, media) => {
 // Function to get a post by its ID
 exports.getPostById = async (postId) => {
     try {
+
         const sql = 'SELECT * FROM posts WHERE id = ?';
         const [rows] = await pool.query(sql, [postId]);
 
         // Check if a post with the given ID exists
-        if (rows.length !== 1) {
-            throw new Error('Post not found');
+        if (rows.length < 1) {
+            err = {
+                status: 404,
+                message: 'Post not found'
+            }
+            return err
         }
 
         return rows[0];
     } catch (error) {
-        throw new Error(error.message);
+        console.error({
+            status: 500,
+            message: `Failed to get single post: ${error.message}`,
+            error: `Failed to get post with ID ${postId}: ${error}`
+        });
+        err = {
+            status: 500,
+            message: `Failed to get single post: ${error.message}`,
+        }
+        return err
     }
 };
 
@@ -105,6 +119,36 @@ exports.updatePost = async (postId, updateFields) => {
     }
 };
 
+// Function to update like count 
+exports.updatePostLikeCount = async (postId, likeCount) => {
+    try {
+        const sql = 'UPDATE posts SET like_count = ? WHERE id = ?';
+        const [result] = await pool.query(sql, [likeCount, postId]);
+        // Check if the post was successfully updated
+        if (result.affectedRows < 1) {
+            err = {
+                status: 500,
+                message: `Failed to update post's like count.`,
+            }
+            return err
+        }
+
+        // Fetch and return the updated post
+        const updatedPost = await this.getPostById(postId);
+        return updatedPost;
+    } catch (error) {
+        console.error({
+            status: 500,
+            message: `Failed to update post like count: ${error.message}`,
+            error: `Failed to update post likes ${postId}: ${error}`
+        });
+        err = {
+            status: 500,
+            message: `Failed to update post's like count: ${error.message}`,
+        }
+        return err
+    }
+};
 
 
 // Function to delete a post
