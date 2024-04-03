@@ -7,11 +7,12 @@ const pool = require('../config/db');
 // Function to fetch user by feilds from the database
 exports.getUserByField = async (fieldName, fieldValue) => {
     try {
-        // Construct the SQL query dynamically based on the field provided
         const query = `SELECT * FROM users WHERE ${fieldName} = ?`;
 
         const [rows] = await pool.query(query, [fieldValue]);
-        return rows[0]; // Assuming there's only one matching user
+
+        return rows[0];
+
     } catch (error) {
         throw error;
     }
@@ -35,12 +36,30 @@ exports.getAllUsers = async () => {
 exports.createUser = async ({ first_name, last_name, full_name, email, password, role, is_admin, profile_picture, username, bio }) => {
     try {
 
+        const date = new Date()
+        const currentDate = `${date}`
+
         const sql = `INSERT INTO users (first_name, last_name, full_name, email, password, role, is_admin, profile_picture, registration_date, username, bio)
         VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
 
-        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, new Date(), username, bio]);
-        const user = this.getUserByField("id", result.insertId)
-        return user;
+        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, currentDate, username, bio]);
+
+        const user = await this.getUserByField("id", result.insertId)
+
+        if (user) {
+            const success = {
+                status: 201,
+                message: "User created successfully!",
+                data: user
+            }
+            return success
+        } else {
+            const err_obj = {
+                status: 404,
+                message: "Something went wrong!"
+            }
+            return err_obj
+        }
     } catch (error) {
         console.log(error);
         const err_obj = {
@@ -51,40 +70,37 @@ exports.createUser = async ({ first_name, last_name, full_name, email, password,
     }
 };
 
-// Function to update user's bio in the database
-exports.updateUserBio = async (id, bio) => {
+// Function to update user's data by provided fields in the database
+exports.updateUserFields = async (id, fieldsToUpdate) => {
     try {
-        const sql = `UPDATE users SET bio =? WHERE id =?`;
-        const [result] = await pool.query(sql, [bio, id]);
-        const user = await this.getUserByField("id", id)
-        console.log("result variable: ", result);
-        if (!result) {
+        // Generate SQL SET clause dynamically based on the fields to update
+        const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
+        const values = Object.values(fieldsToUpdate);
+        const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
+        const valuesWithId = [...values, id];
 
+        const [result] = await pool.query(sql, valuesWithId);
 
-            const err_obj = {
-                status: 404,
-                message: "Something went wrong!"
-            }
-            return err_obj
+        // Check if the update was successful
+        if (result.affectedRows < 1) {
+            return { status: 404, message: 'User not found or data not updated' };
+        }
+
+        // Fetch and return the updated user
+        const updatedUser = await this.getUserByField("id", id);
+        if (!updatedUser) {
+            return { status: 404, message: 'User not found after update' };
         } else {
-            console.log("user variable: ", user);
-            if (!user) {
-                const errObj = {
-                    status: 404,
-                    message: "Could not retrieve data!"
-                }
-                return errObj
-            } else {
-                return user || [];
+            success = {
+                status: 200,
+                message: 'Step 2 completed! User data updated successfully.',
+                data: updatedUser
             }
+            return success
         }
     } catch (error) {
-        console.log(error);
-        const err_obj = {
-            status: 500,
-            message: error.message
-        }
-        return err_obj
+        console.error(error);
+        return { status: 500, message: 'Internal server error' };
     }
 };
 

@@ -35,7 +35,7 @@ const upload = multer({
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     }
-}).single('media'); // 'media' should match the name attribute in the form input field for uploading the image or video
+}).array('media', 15); // Handle multiple files with a maximum of 15 files
 
 // Check file type
 function checkFileType(file, cb) {
@@ -59,51 +59,55 @@ exports.createPost = async (req, res) => {
         // Call upload middleware to handle file upload
         upload(req, res, async (err) => {
             if (err) {
+                console.error(err);
                 return res.status(400).json({
                     status: 400,
                     error: err.message
                 });
             }
 
-            // get user id from token
+            // Get user id from token
             const user_id = req.user.id;
 
             // Extract necessary data from the request body
-            const { caption, id } = req.body;
-            const media = req.file ? req.file.path : null;
+            const { caption } = req.body;
 
-            if (user_id != id) {
-                return res.status(401).json({
-                    status: 401,
-                    error: 'Unauthorized',
-                    message: `Please Login or register if you don't have an account to perform this action`
-                })
+            // Extract uploaded media paths
+            let media = [];
+            if (req.files && req.files.length > 0) {
+                // If multiple files are provided, iterate through them and save their paths
+                media = req.files.map(file => file.path);
+            } else if (req.file) {
+                // If single file is provided, save its path
+                media.push(req.file.path);
             }
 
-            // Validate if caption is provided
-            if (!caption) {
+            // Validate if caption or media is provided
+            if (!caption && media.length === 0) {
                 return res.status(400).json({
                     status: 400,
-                    error: 'Please provide caption'
-                });
-            }
-
-            // Validate if media is provided
-            if (!media) {
-                return res.status(400).json({
-                    status: 400,
-                    error: 'Please provide media'
+                    error: 'Please provide caption or media'
                 });
             }
 
             // Call the model function to create the post
             const newPost = await postModel.insertPost(user_id, caption, media);
 
-            res.status(201).json({
-                status: 201,
-                message: 'Post created successfully',
-                post: newPost
-            });
+            // check if the post was created 
+            if (newPost.status === 200 || newPost.status === 201) {
+                res.status(201).json({
+                    status: 201,
+                    message: 'Post created successfully',
+                    post: newPost
+                });
+            } else {
+                res.status(newPost.status).json({
+                    status: newPost.status,
+                    error: newPost.message
+                });
+            }
+
+
         });
     } catch (error) {
         console.error('Error creating post:', error);

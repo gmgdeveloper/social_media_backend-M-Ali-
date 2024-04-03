@@ -29,9 +29,28 @@ exports.insertPost = async (userId, caption, media) => {
         // Fetch and return the newly created post
         const postId = result.insertId;
         const newPost = await this.getPostById(postId);
-        return newPost;
+        if (newPost) {
+            const success = {
+                status: 201,
+                message: 'Post created successfully',
+                data: newPost
+            }
+            return success;
+        }else{
+            const err = {
+                status: 500,
+                message: 'Failed to create post'
+            }
+            return err
+        }
     } catch (error) {
-        throw new Error(error.message);
+        console.log(error);
+        err = {
+            status: 500,
+            message: `Failed to get create post: ${error.message}`,
+        }
+        return err
+
     }
 };
 

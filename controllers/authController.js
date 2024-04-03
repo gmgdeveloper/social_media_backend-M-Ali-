@@ -66,7 +66,7 @@ exports.register = async (req, res) => {
     const bio = `Hi there, I'm ${full_name}, I created this account on ${new Date().toDateString()}`;
 
     // Set default profile picture
-    const profile_picture = "default.png";
+    const profile_picture = "public/uploads/profiles/default.png";
 
     try {
         // Check if the user already exists by email
@@ -95,33 +95,44 @@ exports.register = async (req, res) => {
             bio
         });
 
-        // Generate JWT token for the new user
-        const payload = {
-            id: newUser.id,
-            first_name: newUser.first_name,
-            last_name: newUser.last_name,
-            full_name: newUser.full_name,
-            email: newUser.email,
-            bio: newUser.bio,
-            username: newUser.username,
-            profile_picture: newUser.profile_picture,
-            role: newUser.role,
-            is_admin: newUser.is_admin
-        };
+        if (newUser.status === 201 || newUser.status === 200) {
+            console.log("New User", newUser);
+            // Generate JWT token for the new user
+            const payload = {
+                id: newUser.data.id,
+                first_name: newUser.data.first_name,
+                last_name: newUser.data.last_name,
+                full_name: newUser.data.full_name,
+                email: newUser.data.email,
+                bio: newUser.data.bio,
+                username: newUser.data.username,
+                profile_picture: newUser.data.profile_picture,
+                role: newUser.data.role,
+                is_admin: newUser.data.is_admin,
+                registration_date: newUser.data.registration_date
+            };
 
-        // Sign JWT token with secret key and expiration time
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
+            // Sign JWT token with secret key and expiration time
+            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
 
-        // Set token and user_id in the response headers
-        res.setHeader('Authorization', `${token}`);
+            // Set token and user_id in the response headers
+            res.setHeader('Authorization', `${token}`);
 
-        // Send success response with user data
-        res.status(201).json({
-            status: 200,
-            message: 'User registered successfully',
-            token: token,
-            user: payload
-        });
+            // Send success response with user data
+            res.status(201).json({
+                status: 200,
+                message: 'User registered successfully',
+                token: token,
+                user: payload
+            });
+        } else {
+            res.status(newUser.status).json({
+                status: newUser.status,
+                error: newUser.message
+            });
+        }
+
+
 
     } catch (error) {
         console.error('Error registering user:', error);
@@ -181,7 +192,8 @@ exports.login = async (req, res) => {
             username: user.username,
             profile_picture: user.profile_picture,
             role: user.role,
-            is_admin: user.is_admin
+            is_admin: user.is_admin,
+            registration_date: user.registration_date
         };
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
@@ -196,7 +208,6 @@ exports.login = async (req, res) => {
         res.status(200).json({
             status: 200,
             message: 'Login successful.',
-            token: token,
             user: payload
         });
     } catch (error) {

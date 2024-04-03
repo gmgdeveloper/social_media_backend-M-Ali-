@@ -60,7 +60,7 @@ exports.getAllUsers = async (req, res) => {
 };
 
 // Controller function to get a single user
-exports.getSingleUser = async (req, res) => {
+exports.getLoggedInUser = async (req, res) => {
     try {
         const id = req.user.id;
 
@@ -76,8 +76,10 @@ exports.getSingleUser = async (req, res) => {
                     email: user.email,
                     bio: user.bio,
                     profile_pic: user.profile_picture,
+                    cover: user.cover,
                     role: user.role,
-                    is_admin: user.is_admin
+                    is_admin: user.is_admin,
+                    registration_date: user.registration_date
                 }
             })
         } else (
@@ -96,18 +98,24 @@ exports.getSingleUser = async (req, res) => {
     }
 }
 
-// Controller function for submitting user bio
-exports.submitBio = async (req, res) => {
-    const { bio } = req.body;
+// Controller function for creating profile step-2
+exports.stepTwo = async (req, res) => {
+    const { bio, username } = req.body;
 
     if (!bio) {
         return res.status(400).json({
             status: 400,
             error: 'Please provide a bio!'
-        })
+        });
+    }
+    if (!username) {
+        return res.status(400).json({
+            status: 400,
+            error: 'Please provide a username!'
+        });
     }
 
-    const id = req.user.id
+    const id = req.user.id;
 
     if (!id) {
         return res.status(400).json({
@@ -126,14 +134,25 @@ exports.submitBio = async (req, res) => {
         });
     }
 
-    // Update the user's bio information in the database
+    // Update the user's data information in the database
     try {
-        const updatedUser = await userModel.updateUserBio(id, bio);
-        res.status(200).json({
-            status: 200,
-            message: 'User bio updated successfully',
-            user: updatedUser
-        });
+        // Call the updateUserFields function to update user's data in the database
+        const updatedUser = await userModel.updateUserFields(id, { bio, username });
+
+        // Check if the update was successful
+        if (updatedUser.status === 200) {
+            res.status(200).json({
+                status: updatedUser.status,
+                message: updatedUser.message,
+                user: updatedUser.data
+            });
+        } else {
+            res.status(404).json({
+                status: 404,
+                error: 'Failed to update user data',
+                message: updatedUser
+            });
+        }
     } catch (error) {
         console.error('Error updating user bio:', error);
         res.status(500).json({
@@ -142,6 +161,7 @@ exports.submitBio = async (req, res) => {
         });
     }
 };
+
 
 // Controller function for uploading user image
 exports.uploadUserProfilePic = async (req, res) => {
@@ -193,5 +213,3 @@ exports.uploadUserProfilePic = async (req, res) => {
         }
     });
 };
-
-

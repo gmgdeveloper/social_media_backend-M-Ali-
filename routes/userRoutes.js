@@ -10,8 +10,13 @@ const handleDefaultRoute = require("../middlewares/handleDefaultRoute")
 router.get('/', authenticateToken, handleDefaultRoute)
 
 // Route for user registration
-router.post('/register', authController.register);
+router.post('/register/step_1', authController.register);
 
+// Route to update users bio as step 2 (protected route)
+router.post("/register/step_2", authenticateToken, userController.stepTwo)
+
+// Route to update users bio as step 2 (protected route)
+router.post("/register/step_3", authenticateToken, userController.uploadUserProfilePic)
 
 // Route for user login
 router.post('/login', authController.login);
@@ -19,36 +24,7 @@ router.post('/login', authController.login);
 // Route for user logout
 router.post("/logout", authController.logout)
 
-
-// Route to update users bio as step 2 (protected route)
-router.post("/register/step_2", authenticateToken, userController.submitBio)
-
-
-// Route to update users bio as step 2 (protected route)
-router.post("/register/step_3", authenticateToken, userController.uploadUserProfilePic)
-
 // Route to get user (protected route)
-router.get('/user', authenticateToken, userController.getSingleUser);
-
-
-// Route for user registration
-// router.get('/register', (req, res) => {
-//     res.json({
-//         status: 200,
-//         success: true,
-//         message: 'Please enter register details'
-//     })
-// });
-
-
-// Route for user login
-// router.get('/login', (req, res) => {
-//     res.json({
-//         status: 200,
-//         success: true,
-//         message: 'Please enter login details'
-//     })
-// });
-
+router.get('/profile', authenticateToken, userController.getLoggedInUser);
 
 module.exports = router;
