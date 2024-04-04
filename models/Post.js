@@ -186,7 +186,6 @@ exports.updatePostLikeCount = async (postId, likeCount) => {
     }
 };
 
-
 // Function to delete a post
 exports.deletePost = async (postId) => {
     try {

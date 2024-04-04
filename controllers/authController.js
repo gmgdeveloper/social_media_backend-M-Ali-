@@ -59,9 +59,6 @@ exports.register = async (req, res) => {
     const role = 'user';
     const is_admin = 0;
 
-    // Generate username using current timestamp
-    const username = `user-${Date.now()}`;
-
     // Generate bio with default message
     const bio = `Hi there, I'm ${full_name}, I created this account on ${new Date().toDateString()}`;
 
@@ -91,7 +88,6 @@ exports.register = async (req, res) => {
             role,
             is_admin,
             profile_picture,
-            username,
             bio
         });
 
@@ -103,7 +99,6 @@ exports.register = async (req, res) => {
                 full_name: newUser.data.full_name,
                 email: newUser.data.email,
                 bio: newUser.data.bio,
-                username: newUser.data.username,
                 profile_picture: newUser.data.profile_picture,
                 role: newUser.data.role,
                 is_admin: newUser.data.is_admin,
@@ -185,7 +180,6 @@ exports.login = async (req, res) => {
             full_name: user.full_name,
             email: user.email,
             bio: user.bio,
-            username: user.username,
             profile_picture: user.profile_picture,
             role: user.role,
             is_admin: user.is_admin,

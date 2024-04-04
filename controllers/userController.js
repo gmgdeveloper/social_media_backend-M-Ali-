@@ -1,42 +1,76 @@
 const userModel = require('../models/User');
+const postModel = require("../models/Post");
 const multer = require('multer');
 const path = require('path');
 
-
-// Set storage engine for Multer
-const storage = multer.diskStorage({
+// Set storage engine for Multer for profile images
+const profileStorage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, './public/uploads/profiles/');
     },
     filename: function (req, file, cb) {
-        cb(null, file.fieldname + '-' + Date.now() + "-" + file.originalname);
+        cb(null, 'profile-' + Date.now() + "-" + file.originalname);
     }
 });
 
-// Initialize Multer upload
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 10000000 }, // Limit file size to 10MB
-    fileFilter: function (req, file, cb) {
-        checkFileType(file, cb);
-    }
-}).single('profile'); // 'avatar' should match the name attribute in the form input field for uploading the image
-
-// Check file type
-function checkFileType(file, cb) {
-    // Allowed file extensions
+// Check file type for profile images
+function checkProfileFileType(file, cb) {
     const filetypes = /jpeg|jpg|png/;
-    // Check file extension
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    // Check MIME type
     const mimetype = filetypes.test(file.mimetype);
-
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb('Error: Images only (JPEG, JPG, PNG)');
+        cb('Error: Profile images only (JPEG, JPG, PNG)');
     }
 }
+
+// Initialize Multer upload for profile images
+const uploadProfile = multer({
+    storage: profileStorage,
+    limits: { fileSize: 10000000 }, // Limit file size to 10MB
+    fileFilter: function (req, file, cb) {
+        console.log("req of profile", req);
+        console.log("file of profile", file);
+        console.log('Profile upload field:', file.fieldname); // Log the field name
+        checkProfileFileType(file, cb);
+    }
+}).single('profile');
+
+// Set storage engine for Multer for cover images
+// const coverStorage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, './public/uploads/covers/');
+//     },
+//     filename: function (req, file, cb) {
+//         cb(null, 'cover-' + Date.now() + "-" + file.originalname);
+//     }
+// });
+
+
+// // Initialize Multer upload for cover images
+// const uploadCover = multer({
+//     storage: coverStorage,
+//     limits: { fileSize: 10000000 }, // Limit file size to 10MB
+//     fileFilter: function (req, file, cb) {
+//         console.log("req of cover", req);
+//         console.log("file of cover", file);
+//         console.log('Cover upload field:', file.fieldname); // Log the field name
+//         checkCoverFileType(file, cb);
+//     }
+// }).single('cover');
+
+// Check file type for cover images
+// function checkCoverFileType(file, cb) {
+//     const filetypes = /jpeg|jpg|png/;
+//     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+//     const mimetype = filetypes.test(file.mimetype);
+//     if (mimetype && extname) {
+//         return cb(null, true);
+//     } else {
+//         cb('Error: Cover images only (JPEG, JPG, PNG)');
+//     }
+// }
 
 // Controller function to get all users
 exports.getAllUsers = async (req, res) => {
@@ -66,6 +100,9 @@ exports.getLoggedInUser = async (req, res) => {
 
         const user = await userModel.getUserByField("id", id);
 
+        // Get all posts of user 
+        const posts = await postModel.getAllPostsByUserId(id);
+
         if (user.id == req.user.id) {
             res.status(200).json({
                 status: 200,
@@ -79,8 +116,10 @@ exports.getLoggedInUser = async (req, res) => {
                     cover: user.cover,
                     role: user.role,
                     is_admin: user.is_admin,
+                    is_active: user.is_active,
                     registration_date: user.registration_date
-                }
+                },
+                posts: posts
             })
         } else (
             res.status(404).json({
@@ -100,18 +139,12 @@ exports.getLoggedInUser = async (req, res) => {
 
 // Controller function for creating profile step-2
 exports.stepTwo = async (req, res) => {
-    const { bio, username } = req.body;
+    const { bio } = req.body;
 
     if (!bio) {
         return res.status(400).json({
             status: 400,
             error: 'Please provide a bio!'
-        });
-    }
-    if (!username) {
-        return res.status(400).json({
-            status: 400,
-            error: 'Please provide a username!'
         });
     }
 
@@ -137,7 +170,7 @@ exports.stepTwo = async (req, res) => {
     // Update the user's data information in the database
     try {
         // Call the updateUserFields function to update user's data in the database
-        const updatedUser = await userModel.updateUserFields(id, { bio, username });
+        const updatedUser = await userModel.updateUserFields(id, { bio }, "Step 2 completed! Your data have been updated.");
 
         // Check if the update was successful
         if (updatedUser.status === 200) {
@@ -162,49 +195,54 @@ exports.stepTwo = async (req, res) => {
     }
 };
 
-
-// Controller function for uploading user image (profile picture) - Step 3
+// Controller function for uploading user profile image - Step 3
 exports.stepThree = async (req, res) => {
-    upload(req, res, async (err) => {
+    uploadProfile(req, res, async (errProfile) => {
         try {
-            // Check for Multer errors
-            if (err instanceof multer.MulterError) {
-                console.log(err);
+            // Check for Multer errors for profile image
+            if (errProfile instanceof multer.MulterError) {
+                console.log(errProfile);
                 return res.status(400).json({
                     status: 400,
-                    error: 'Multer error: ' + err.message
+                    field: "profile",
+                    error: 'Multer error: ' + errProfile.message
                 });
-            } else if (err) {
-                console.log(err);
+            } else if (errProfile) {
+                console.log(errProfile);
                 return res.status(500).json({
                     status: 500,
-                    error: 'Internal server error: ' + err.message
+                    field: "profile",
+                    error: 'Internal server error: ' + errProfile
                 });
             }
 
-            // Check if file is provided
+            // Check if profile image file is provided
             if (!req.file) {
                 return res.status(400).json({
                     status: 400,
-                    error: 'No file uploaded'
+                    error: 'No profile image uploaded'
                 });
             }
 
             // Get user ID from the authenticated user
             const userId = req.user.id;
 
-            // Get file path
-            const filePath = req.file.filename;
-            // Update user record in the database with the file path and set is_active to 1
-            const updatedUser = await userModel.updateUserFields(userId, { profile_picture: filePath, is_active: 1 });
+            // Get profile image file path
+            const profileImagePath = req.file.filename;
+
+            // Update user record in the database with the profile image path
+            const updatedUser = await userModel.updateUserFields(userId, {
+                profile_picture: profileImagePath,
+                is_active: 1
+            }, "Step 3 completed! Your data have been updated you can now use all features.");
 
             res.status(200).json({
                 status: 200,
-                message: 'User image uploaded successfully',
+                message: 'User profile image uploaded successfully',
                 user: updatedUser
             });
         } catch (error) {
-            console.error('Error uploading user image:', error.message);
+            console.error('Error uploading user profile image:', error.message);
             res.status(500).json({
                 status: 500,
                 error: `Internal server error: ${error.message}`

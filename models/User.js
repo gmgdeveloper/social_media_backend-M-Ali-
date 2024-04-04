@@ -3,7 +3,6 @@
 // Import the database connection
 const pool = require('../config/db');
 
-
 // Function to fetch user by feilds from the database
 exports.getUserByField = async (fieldName, fieldValue) => {
     try {
@@ -31,18 +30,17 @@ exports.getAllUsers = async () => {
     }
 };
 
-
 // Function to create a new user in the database
-exports.createUser = async ({ first_name, last_name, full_name, email, password, role, is_admin, profile_picture, username, bio }) => {
+exports.createUser = async ({ first_name, last_name, full_name, email, password, role, is_admin, profile_picture, bio }) => {
     try {
 
         const date = new Date()
         const currentDate = `${date}`
 
-        const sql = `INSERT INTO users (first_name, last_name, full_name, email, password, role, is_admin, profile_picture, registration_date, username, bio)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
+        const sql = `INSERT INTO users (first_name, last_name, full_name, email, password, role, is_admin, profile_picture, registration_date, bio)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`;
 
-        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, currentDate, username, bio]);
+        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, currentDate, bio]);
 
         const user = await this.getUserByField("id", result.insertId)
 
@@ -71,10 +69,9 @@ exports.createUser = async ({ first_name, last_name, full_name, email, password,
 };
 
 // Function to update user's data by provided fields in the database
-exports.updateUserFields = async (id, fieldsToUpdate) => {
+exports.updateUserFields = async (id, fieldsToUpdate, successMsg) => {
     try {
         // Generate SQL SET clause dynamically based on the fields to update
-
         const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
         // console.log("Set Clause:", setClause);
         const values = Object.values(fieldsToUpdate);
@@ -98,7 +95,7 @@ exports.updateUserFields = async (id, fieldsToUpdate) => {
         } else {
             success = {
                 status: 200,
-                message: 'Step 2 completed! User data updated successfully.',
+                message: successMsg,
                 data: updatedUser
             }
             return success
@@ -106,29 +103,5 @@ exports.updateUserFields = async (id, fieldsToUpdate) => {
     } catch (error) {
         console.error(error);
         return { status: 500, message: 'Internal server error' };
-    }
-};
-
-// Function to update user's profile picture in the database
-exports.updateUserProfilePic = async (userId, filePath) => {
-    try {
-        // Define SQL query to update user's profile picture
-        const sql = 'UPDATE users SET profile_picture = ? WHERE id = ?';
-
-        // Execute SQL query to update user's profile picture
-        const [result] = await pool.query(sql, [filePath, userId]);
-
-        // Check if any rows were affected by the update
-        if (result.affectedRows === 0) {
-            // If no rows were affected, throw an error indicating that the user was not found
-            throw new Error('User not found');
-        }
-
-        // Fetch and return the updated user by their ID
-        const updatedUser = await this.getUserByField('id', userId);
-        return updatedUser;
-    } catch (error) {
-        // Catch any errors that occur during the update process and rethrow them
-        throw new Error(error.message);
     }
 };
