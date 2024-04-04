@@ -66,7 +66,7 @@ exports.register = async (req, res) => {
     const bio = `Hi there, I'm ${full_name}, I created this account on ${new Date().toDateString()}`;
 
     // Set default profile picture
-    const profile_picture = "public/uploads/profiles/default.png";
+    const profile_picture = "/uploads/profiles/default.jpg";
 
     try {
         // Check if the user already exists by email
@@ -96,8 +96,6 @@ exports.register = async (req, res) => {
         });
 
         if (newUser.status === 201 || newUser.status === 200) {
-            console.log("New User", newUser);
-            // Generate JWT token for the new user
             const payload = {
                 id: newUser.data.id,
                 first_name: newUser.data.first_name,
@@ -109,6 +107,7 @@ exports.register = async (req, res) => {
                 profile_picture: newUser.data.profile_picture,
                 role: newUser.data.role,
                 is_admin: newUser.data.is_admin,
+                is_active: newUser.data.is_active,
                 registration_date: newUser.data.registration_date
             };
 
@@ -122,7 +121,6 @@ exports.register = async (req, res) => {
             res.status(201).json({
                 status: 200,
                 message: 'User registered successfully',
-                token: token,
                 user: payload
             });
         } else {
@@ -131,8 +129,6 @@ exports.register = async (req, res) => {
                 error: newUser.message
             });
         }
-
-
 
     } catch (error) {
         console.error('Error registering user:', error);
@@ -193,6 +189,7 @@ exports.login = async (req, res) => {
             profile_picture: user.profile_picture,
             role: user.role,
             is_admin: user.is_admin,
+            is_active: user.is_active,
             registration_date: user.registration_date
         };
 

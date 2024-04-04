@@ -74,10 +74,15 @@ exports.createUser = async ({ first_name, last_name, full_name, email, password,
 exports.updateUserFields = async (id, fieldsToUpdate) => {
     try {
         // Generate SQL SET clause dynamically based on the fields to update
+
         const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
+        // console.log("Set Clause:", setClause);
         const values = Object.values(fieldsToUpdate);
+        // console.log("values", values);
         const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
+        // console.log("sql", sql);
         const valuesWithId = [...values, id];
+        // console.log("valuesWithId", valuesWithId);
 
         const [result] = await pool.query(sql, valuesWithId);
 

@@ -20,6 +20,7 @@ app.use(express.static("public"));
 app.use(cors());
 
 // Routes 
+app.use("/", postRoutes)
 app.use("/api", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/likes", likeRoutes);

@@ -163,8 +163,8 @@ exports.stepTwo = async (req, res) => {
 };
 
 
-// Controller function for uploading user image
-exports.uploadUserProfilePic = async (req, res) => {
+// Controller function for uploading user image (profile picture) - Step 3
+exports.stepThree = async (req, res) => {
     upload(req, res, async (err) => {
         try {
             // Check for Multer errors
@@ -191,13 +191,12 @@ exports.uploadUserProfilePic = async (req, res) => {
             }
 
             // Get user ID from the authenticated user
-            const userId = req.user.id; // Assuming req.user contains authenticated user data
+            const userId = req.user.id;
 
             // Get file path
-            const filePath = req.file.path;
-
-            // Update user record in the database with the file path
-            const updatedUser = await userModel.updateUserProfilePic(userId, filePath);
+            const filePath = req.file.filename;
+            // Update user record in the database with the file path and set is_active to 1
+            const updatedUser = await userModel.updateUserFields(userId, { profile_picture: filePath, is_active: 1 });
 
             res.status(200).json({
                 status: 200,

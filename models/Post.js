@@ -11,6 +11,23 @@ exports.getAllPosts = async () => {
     }
 };
 
+// Model function to get all posts with user data
+exports.getAllPostsWithUserData = async () => {
+    try {
+        // SQL query to join posts table with users table
+        const sql = `
+            SELECT posts.*, users.full_name, users.profile_picture
+            FROM posts
+            JOIN users ON posts.user_id = users.id
+            `;
+        const [posts] = await pool.query(sql);
+        return posts;
+    } catch (error) {
+        throw error;
+    }
+};
+
+
 // Function to create a new post
 exports.insertPost = async (userId, caption, media) => {
     try {
@@ -36,7 +53,7 @@ exports.insertPost = async (userId, caption, media) => {
                 data: newPost
             }
             return success;
-        }else{
+        } else {
             const err = {
                 status: 500,
                 message: 'Failed to create post'

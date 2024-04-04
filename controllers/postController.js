@@ -118,12 +118,11 @@ exports.createPost = async (req, res) => {
     }
 };
 
-// Controller function to get all posts
+// Controller function to get all posts with user data
 exports.getAllPosts = async (req, res) => {
     try {
-        // Call the model function to retrieve all posts
-        const posts = await postModel.getAllPosts();
-
+        // Call the model function to retrieve all posts with user data
+        const posts = await postModel.getAllPostsWithUserData();
         res.status(200).json({
             status: 200,
             message: 'Posts fetched successfully',

@@ -9,7 +9,7 @@ const authenticateToken = (req, res, next) => {
 
     // Check if token is provided
     if (!token) {
-        return res.status(401).json({ error: 'Access denied. No token provided.' });
+        return res.status(401).json({ stauts: 401, error: 'Access denied. No token provided.' });
     }
 
     try {
