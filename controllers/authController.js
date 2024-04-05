@@ -63,7 +63,8 @@ exports.register = async (req, res) => {
     const bio = `Hi there, I'm ${full_name}, I created this account on ${new Date().toDateString()}`;
 
     // Set default profile picture
-    const profile_picture = "/uploads/profiles/default.jpg";
+    const profile_picture = "default.jpg";
+    const cover_picture = "default.jpg";
 
     try {
         // Check if the user already exists by email
@@ -88,6 +89,7 @@ exports.register = async (req, res) => {
             role,
             is_admin,
             profile_picture,
+            cover_picture,
             bio
         });
 
@@ -100,6 +102,7 @@ exports.register = async (req, res) => {
                 email: newUser.data.email,
                 bio: newUser.data.bio,
                 profile_picture: newUser.data.profile_picture,
+                cover_picture: newUser.data.cover_picture,
                 role: newUser.data.role,
                 is_admin: newUser.data.is_admin,
                 is_active: newUser.data.is_active,
@@ -116,7 +119,8 @@ exports.register = async (req, res) => {
             res.status(201).json({
                 status: 200,
                 message: 'User registered successfully',
-                user: payload
+                user: payload,
+                token: token
             });
         } else {
             res.status(newUser.status).json({
@@ -199,7 +203,8 @@ exports.login = async (req, res) => {
         res.status(200).json({
             status: 200,
             message: 'Login successful.',
-            user: payload
+            user: payload,
+            token: token
         });
     } catch (error) {
         console.error('Error logging in user:', error);

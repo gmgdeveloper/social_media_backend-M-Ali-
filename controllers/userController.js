@@ -3,74 +3,41 @@ const postModel = require("../models/Post");
 const multer = require('multer');
 const path = require('path');
 
-// Set storage engine for Multer for profile images
-const profileStorage = multer.diskStorage({
+// Set storage engine for Multer for profile and cover images
+const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, './public/uploads/profiles/');
+        if (file.fieldname === 'profile') {
+            cb(null, './public/uploads/profiles/');
+        } else if (file.fieldname === 'cover') {
+            cb(null, './public/uploads/covers/');
+        }
     },
     filename: function (req, file, cb) {
-        cb(null, 'profile-' + Date.now() + "-" + file.originalname);
+        const prefix = file.fieldname === 'profile' ? 'profile-' : 'cover-';
+        cb(null, prefix + Date.now() + "-" + file.originalname);
     }
 });
 
-// Check file type for profile images
-function checkProfileFileType(file, cb) {
+// Check file type for profile and cover images
+function checkFileType(file, cb) {
     const filetypes = /jpeg|jpg|png/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = filetypes.test(file.mimetype);
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb('Error: Profile images only (JPEG, JPG, PNG)');
+        cb('Error: Images only (JPEG, JPG, PNG)');
     }
 }
 
-// Initialize Multer upload for profile images
-const uploadProfile = multer({
-    storage: profileStorage,
+// Initialize Multer upload for profile and cover images
+const uploadProfileAndCover = multer({
+    storage: storage,
     limits: { fileSize: 10000000 }, // Limit file size to 10MB
     fileFilter: function (req, file, cb) {
-        console.log("req of profile", req);
-        console.log("file of profile", file);
-        console.log('Profile upload field:', file.fieldname); // Log the field name
-        checkProfileFileType(file, cb);
+        checkFileType(file, cb);
     }
-}).single('profile');
-
-// Set storage engine for Multer for cover images
-// const coverStorage = multer.diskStorage({
-//     destination: function (req, file, cb) {
-//         cb(null, './public/uploads/covers/');
-//     },
-//     filename: function (req, file, cb) {
-//         cb(null, 'cover-' + Date.now() + "-" + file.originalname);
-//     }
-// });
-
-
-// // Initialize Multer upload for cover images
-// const uploadCover = multer({
-//     storage: coverStorage,
-//     limits: { fileSize: 10000000 }, // Limit file size to 10MB
-//     fileFilter: function (req, file, cb) {
-//         console.log("req of cover", req);
-//         console.log("file of cover", file);
-//         console.log('Cover upload field:', file.fieldname); // Log the field name
-//         checkCoverFileType(file, cb);
-//     }
-// }).single('cover');
-
-// Check file type for cover images
-// function checkCoverFileType(file, cb) {
-//     const filetypes = /jpeg|jpg|png/;
-//     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-//     const mimetype = filetypes.test(file.mimetype);
-//     if (mimetype && extname) {
-//         return cb(null, true);
-//     } else {
-//         cb('Error: Cover images only (JPEG, JPG, PNG)');
-//     }
-// }
+}).fields([{ name: 'profile', maxCount: 1 }, { name: 'cover', maxCount: 1 }]); // Specify field names for profile and cover images
 
 // Controller function to get all users
 exports.getAllUsers = async (req, res) => {
@@ -113,7 +80,7 @@ exports.getLoggedInUser = async (req, res) => {
                     email: user.email,
                     bio: user.bio,
                     profile_pic: user.profile_picture,
-                    cover: user.cover,
+                    cover: user.cover_picture,
                     role: user.role,
                     is_admin: user.is_admin,
                     is_active: user.is_active,
@@ -195,54 +162,63 @@ exports.stepTwo = async (req, res) => {
     }
 };
 
-// Controller function for uploading user profile image - Step 3
+// Controller function for uploading user profile and cover images
 exports.stepThree = async (req, res) => {
-    uploadProfile(req, res, async (errProfile) => {
+    uploadProfileAndCover(req, res, async (err) => {
         try {
-            // Check for Multer errors for profile image
-            if (errProfile instanceof multer.MulterError) {
-                console.log(errProfile);
+            // Check for Multer errors
+            if (err instanceof multer.MulterError) {
+                console.log(err);
                 return res.status(400).json({
                     status: 400,
-                    field: "profile",
-                    error: 'Multer error: ' + errProfile.message
+                    error: 'Multer error: ' + err.message
                 });
-            } else if (errProfile) {
-                console.log(errProfile);
+            } else if (err) {
+                console.log(err);
                 return res.status(500).json({
                     status: 500,
-                    field: "profile",
-                    error: 'Internal server error: ' + errProfile
+                    error: 'Internal server error: ' + err
                 });
             }
 
-            // Check if profile image file is provided
-            if (!req.file) {
+            // Check if both profile and cover images are provided
+            if (!req.files || !req.files['profile'] || !req.files['cover']) {
                 return res.status(400).json({
                     status: 400,
-                    error: 'No profile image uploaded'
+                    error: 'Both profile and cover images are required'
                 });
             }
 
             // Get user ID from the authenticated user
             const userId = req.user.id;
 
-            // Get profile image file path
-            const profileImagePath = req.file.filename;
+            // Get profile and cover image file paths
+            const profileImagePath = req.files['profile'][0].filename;
+            const coverImagePath = req.files['cover'][0].filename;
 
-            // Update user record in the database with the profile image path
+            // Update user record in the database with the profile and cover image paths
             const updatedUser = await userModel.updateUserFields(userId, {
                 profile_picture: profileImagePath,
+                cover_picture: coverImagePath,
                 is_active: 1
-            }, "Step 3 completed! Your data have been updated you can now use all features.");
+            }, "Step 3 completed! Profile and cover images uploaded successfully");
 
-            res.status(200).json({
-                status: 200,
-                message: 'User profile image uploaded successfully',
-                user: updatedUser
-            });
+            if (updatedUser.status === 200) {
+                res.status(updatedUser.status).json({
+                    status: updatedUser.status,
+                    message: updatedUser.message,
+                    user: updatedUser.data
+                });
+            } else {
+                res.status(updatedUser.status).json({
+                    status: updatedUser.status,
+                    error: updatedUser.message,
+                });
+            }
+
+
         } catch (error) {
-            console.error('Error uploading user profile image:', error.message);
+            console.error('Error uploading profile and cover images:', error.message);
             res.status(500).json({
                 status: 500,
                 error: `Internal server error: ${error.message}`
@@ -250,3 +226,4 @@ exports.stepThree = async (req, res) => {
         }
     });
 };
+

@@ -31,16 +31,16 @@ exports.getAllUsers = async () => {
 };
 
 // Function to create a new user in the database
-exports.createUser = async ({ first_name, last_name, full_name, email, password, role, is_admin, profile_picture, bio }) => {
+exports.createUser = async ({ first_name, last_name, full_name, email, password, role, is_admin, profile_picture, cover_picture, bio }) => {
     try {
 
         const date = new Date()
         const currentDate = `${date}`
 
-        const sql = `INSERT INTO users (first_name, last_name, full_name, email, password, role, is_admin, profile_picture, registration_date, bio)
-        VALUES (?,?,?,?,?,?,?,?,?,?)`;
+        const sql = `INSERT INTO users (first_name, last_name, full_name, email, password, role, is_admin, profile_picture,cover_picture, registration_date, bio)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
 
-        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, currentDate, bio]);
+        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, cover_picture, currentDate, bio]);
 
         const user = await this.getUserByField("id", result.insertId)
 
@@ -102,6 +102,6 @@ exports.updateUserFields = async (id, fieldsToUpdate, successMsg) => {
         }
     } catch (error) {
         console.error(error);
-        return { status: 500, message: 'Internal server error' };
+        return { status: 500, message: `Internal server error: ${error.message}` };
     }
 };

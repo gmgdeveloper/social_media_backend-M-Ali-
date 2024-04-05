@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
 // Initialize Multer upload
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10000000 }, // Limit file size to 10MB
+    limits: { fileSize: 100000000 }, // Limit file size to 100MB
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     }
@@ -72,14 +72,14 @@ exports.createPost = async (req, res) => {
             // Extract necessary data from the request body
             const { caption } = req.body;
 
-            // Extract uploaded media paths
+            // Extract uploaded media filenames
             let media = [];
             if (req.files && req.files.length > 0) {
-                // If multiple files are provided, iterate through them and save their paths
-                media = req.files.map(file => file.path);
+                // If multiple files are provided, iterate through them and save their filenames
+                media = req.files.map(file => file.filename);
             } else if (req.file) {
-                // If single file is provided, save its path
-                media.push(req.file.path);
+                // If single file is provided, save its filename
+                media.push(req.file.filename);
             }
 
             // Validate if caption or media is provided
@@ -90,10 +90,11 @@ exports.createPost = async (req, res) => {
                 });
             }
 
+            console.log("media in controller", media);
             // Call the model function to create the post
             const newPost = await postModel.insertPost(user_id, caption, media);
 
-            // check if the post was created 
+            // Check if the post was created 
             if (newPost.status === 200 || newPost.status === 201) {
                 res.status(201).json({
                     status: 201,
@@ -106,8 +107,6 @@ exports.createPost = async (req, res) => {
                     error: newPost.message
                 });
             }
-
-
         });
     } catch (error) {
         console.error('Error creating post:', error);
@@ -199,6 +198,7 @@ exports.getPostsByUser = async (req, res) => {
 exports.updatePostById = async (req, res) => {
     try {
         const postId = req.params.id;
+
         // Check if the user is authenticated
         if (!req.user) {
             return res.status(401).json({
@@ -210,7 +210,7 @@ exports.updatePostById = async (req, res) => {
         // Check if the user is an admin
         if (req.user.role === 'admin') {
             // Admin can update any post, proceed with the update
-            updatePost();
+            await updatePost();
         } else {
             // User is not an admin, check if the user is the owner of the post
             const post = await postModel.getPostById(postId);
@@ -222,7 +222,7 @@ exports.updatePostById = async (req, res) => {
                 });
             }
 
-            if (post.user_id !== req.user.id) {
+            if (post.post.user_id !== req.user.id) {
                 // User is not the owner of the post, forbid the update
                 return res.status(401).json({
                     status: 401,
@@ -231,11 +231,11 @@ exports.updatePostById = async (req, res) => {
             }
 
             // User is the owner of the post, proceed with the update
-            updatePost();
+            await updatePost();
         }
 
         async function updatePost() {
-            // Check if a file is uploaded
+            // Call upload middleware to handle file upload
             upload(req, res, async (err) => {
                 if (err) {
                     console.error('Error uploading file:', err);
@@ -244,7 +244,10 @@ exports.updatePostById = async (req, res) => {
                         error: err.message
                     });
                 }
-                const { caption } = req.body
+
+                // Extract necessary data from the request body
+                const { caption } = req.body;
+
                 // Initialize an object to store the fields to be updated
                 const updateFields = {};
 
@@ -254,9 +257,15 @@ exports.updatePostById = async (req, res) => {
                 }
 
                 // Check if a file is uploaded
-                if (req.file) {
-                    updateFields.media = req.file.path;
+                if (req.files && req.files.length > 0) {
+                    // If multiple files are provided, iterate through them and save their filenames
+                    updateFields.media = req.files.map(file => file.filename);
+                } else if (req.file) {
+                    // If single file is provided, save its filename
+                    updateFields.media = req.file.filename;
                 }
+
+                console.log("controller", updateFields);
 
                 // Call the model function to update the post with the provided fields
                 const updatedPost = await postModel.updatePost(postId, updateFields);
