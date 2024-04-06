@@ -8,10 +8,7 @@ exports.getAllPostsWithUserData = async () => {
             INNER JOIN users ON posts.user_id = users.id
             ORDER BY posts.id DESC
         `;
-        console.log("sql", sql);
         const [posts] = await pool.query(sql);
-        console.log("logging posts in model", posts);
-
         posts.forEach(post => {
             post.media = post.media.split(',');
         });
@@ -31,12 +28,24 @@ exports.getAllPostsWithUserData = async () => {
 exports.insertPost = async (userId, caption, media) => {
     try {
         const date = new Date();
-        const currentDate = `${date}`;
+        const options = {
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: true // Use 12-hour format
+        };
+        const currentDate = date.toLocaleString('en-US', options);
+
+        // Remove the timezone part from the formatted date
+        const formattedDate = currentDate.replace(/ GMT\+\d{4} \(.*\)$/, '');
 
         const mediaString = media.join(',');
 
-        const values = [userId, caption, mediaString, currentDate];
-        console.log("values", values);
+        const values = [userId, caption, mediaString, formattedDate];
         const sql = 'INSERT INTO posts (user_id, caption, media, post_date) VALUES (?, ?, ?, ?)';
         const [result] = await pool.query(sql, values);
 
@@ -66,6 +75,7 @@ exports.insertPost = async (userId, caption, media) => {
         };
     }
 };
+
 
 exports.getPostById = async (postId) => {
     try {
@@ -143,46 +153,58 @@ exports.getAllPostsByUserId = async (userId) => {
 exports.updatePost = async (postId, updateFields) => {
     try {
         if (Object.keys(updateFields).length === 0) {
-            throw new Error('No fields provided for update');
+            console.log('No fields provided for update');
+            const errObj = {
+                status: 400,
+                message: 'No fields provided for update'
+            };
+            return errObj;
         }
 
-        let sql = 'UPDATE posts SET ';
+        const sql = 'UPDATE posts SET ';
         const values = [];
-        let mediaValues = [];
+        const mediaValues = [];
 
+        let sqlFields = '';
         Object.keys(updateFields).forEach((key, index) => {
             if (key !== 'media') {
-                sql += `${key} = ?`;
+                sqlFields += `${key} = ?`;
                 values.push(updateFields[key]);
+
             } else {
-                mediaValues = updateFields[key];
-            }
-            if (index < Object.keys(updateFields).length - 1) {
-                sql += ', ';
+                mediaValues.push(updateFields[key]);
             }
         });
 
-        sql += ' WHERE id = ?';
-        values.push(postId);
-
-        const [result] = await pool.query(sql, [...values, postId]);
-
-        if (result.affectedRows < 1) {
-            throw new Error('Failed to update post');
+        if (sqlFields !== '' && mediaValues.length > 0) {
+            sqlFields += ', ';
         }
-
         if (mediaValues.length > 0) {
-            const updateMediaSql = 'UPDATE posts SET media = ? WHERE id = ?';
-            await pool.query(updateMediaSql, [mediaValues.join(','), postId]);
+            sqlFields += 'media = ?';
+            values.push(mediaValues.join(','));
         }
 
+        sqlFields += ' WHERE id = ?';
+        values.push(postId);
+        await pool.query(sql + sqlFields, [...values]);
         const updatedPost = await this.getPostById(postId);
-        return updatedPost;
+
+        const success = {
+            status: 200,
+            message: 'Post updated successfully',
+            data: updatedPost
+        }
+
+        return success;
     } catch (error) {
-        throw new Error(error.message);
+        console.error(error);
+        const errObj = {
+            status: 500,
+            message: `Failed to update post: ${error.message}`,
+        };
+        return errObj;
     }
 };
-
 
 exports.updatePostLikeCount = async (postId, likeCount) => {
     try {

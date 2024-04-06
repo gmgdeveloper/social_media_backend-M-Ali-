@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); 
-const userModel = require('../models/User'); 
+const bcrypt = require('bcryptjs');
+const userModel = require('../models/User');
 const Joi = require('joi');
 const env = require("dotenv")
 env.config();
@@ -26,7 +26,7 @@ const loginSchema = Joi.object({
     password: Joi.string().min(8).required()
 });
 
-const activeSessions = {}; 
+const activeSessions = {};
 
 exports.register = async (req, res) => {
     const { error } = registerSchema.validate(req.body);
@@ -88,7 +88,7 @@ exports.register = async (req, res) => {
                 registration_date: newUser.data.registration_date
             };
 
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
+            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '4h' });
 
             res.setHeader('Authorization', `${token}`);
 
@@ -159,7 +159,7 @@ exports.login = async (req, res) => {
             registration_date: user.registration_date
         };
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '4h' });
 
         activeSessions[user.id] = token;
         res.setHeader('Authorization', `${token}`)

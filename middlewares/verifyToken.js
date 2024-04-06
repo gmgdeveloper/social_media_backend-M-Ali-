@@ -4,7 +4,7 @@ const authenticateToken = (req, res, next) => {
     const token = req.header('Authorization');
 
     if (!token) {
-        return res.status(401).json({ stauts: 401, error: 'Access denied. No token provided.' });
+        return res.status(401).json({ stauts: 401, error: 'Access denied. Please Login First.' });
     }
 
     try {
@@ -12,7 +12,7 @@ const authenticateToken = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (error) {
-        res.status(401).json({ error: 'Invalid token.' });
+        res.status(401).json({ error: 'Access denied. Please Login or Register.' });
     }
 };
 

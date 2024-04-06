@@ -10,10 +10,11 @@ exports.likeAndUnlikePost = async (req, res) => {
             });
         }
 
-        const postId = req.params.id;
+        const postId = parseInt(req.params.id);
         const userId = req.user.id;
         const post = await postModel.getPostById(postId);
 
+        console.log(post);
         if (post.status === 404) {
             return res.status(404).json({
                 status: 404,
@@ -87,6 +88,7 @@ exports.getAllLikesOfAPost = async (req, res) => {
         const postId = parseInt(req.params.id);
 
         const post = await postModel.getPostById(postId);
+        console.log(post);
         if (!post) {
             return res.status(404).json({
                 status: 404,

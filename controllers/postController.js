@@ -73,7 +73,6 @@ exports.createPost = async (req, res) => {
                 });
             }
 
-            console.log("media in controller", media);
             const newPost = await postModel.insertPost(user_id, caption, media);
 
             if (newPost.status === 200 || newPost.status === 201) {
@@ -171,7 +170,7 @@ exports.getPostsByUser = async (req, res) => {
 
 exports.updatePostById = async (req, res) => {
     try {
-        const postId = req.params.id;
+        const postId = parseInt(req.params.id);
 
         if (!req.user) {
             return res.status(401).json({
@@ -216,7 +215,7 @@ exports.updatePostById = async (req, res) => {
 
                 const updateFields = {};
 
-                if (caption !== undefined) {
+                if (caption !== undefined && caption !== "") {
                     updateFields.caption = caption;
                 }
 
@@ -226,15 +225,23 @@ exports.updatePostById = async (req, res) => {
                     updateFields.media = req.file.filename;
                 }
 
-                console.log("controller", updateFields);
 
                 const updatedPost = await postModel.updatePost(postId, updateFields);
 
-                res.status(200).json({
-                    status: 200,
-                    message: 'Post updated successfully',
-                    post: updatedPost
-                });
+                if (updatedPost.status === 200) {
+                    res.status(200).json({
+                        status: 200,
+                        message: 'Post updated successfully',
+                        post: updatedPost.data
+                    });
+                } else {
+                    res.status(updatedPost.status).json({
+                        status: updatedPost.status,
+                        error: updatedPost.message || 'Internal server error'
+                    });
+                }
+
+
             });
         }
     } catch (error) {
@@ -276,7 +283,7 @@ exports.deletePostById = async (req, res) => {
             }
         }
 
-        if (post.user_id !== userId) {
+        if (post.post.user_id !== userId) {
             return res.status(401).json({
                 status: 401,
                 error: 'You are not authorized to delete this post'

@@ -27,14 +27,26 @@ exports.getAllUsers = async () => {
 
 exports.createUser = async ({ first_name, last_name, full_name, email, password, role, is_admin, profile_picture, cover_picture, bio }) => {
     try {
+        const date = new Date();
+        const options = {
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: true // Use 12-hour format
+        };
+        const currentDate = date.toLocaleString('en-US', options);
 
-        const date = new Date()
-        const currentDate = `${date}`
+        // Remove the timezone part from the formatted date
+        const formattedDate = currentDate.replace(/ GMT\+\d{4} \(.*\)$/, '');
 
         const sql = `INSERT INTO users (first_name, last_name, full_name, email, password, role, is_admin, profile_picture,cover_picture, registration_date, bio)
         VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
 
-        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, cover_picture, currentDate, bio]);
+        const [result] = await pool.query(sql, [first_name, last_name, full_name, email, password, role, is_admin, profile_picture, cover_picture, formattedDate, bio]);
 
         const user = await this.getUserByField("id", result.insertId)
 
@@ -61,6 +73,7 @@ exports.createUser = async ({ first_name, last_name, full_name, email, password,
         return err_obj
     }
 };
+
 
 exports.updateUserFields = async (id, fieldsToUpdate, successMsg) => {
     try {

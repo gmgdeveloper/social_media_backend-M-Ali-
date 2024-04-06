@@ -2,7 +2,17 @@ const pool = require('../config/db');
 
 exports.getAllLikesOfAPost = async (postId) => {
     try {
-        const sql = 'SELECT * FROM likes WHERE post_id = ?';
+        const sql = `
+            SELECT 
+                likes.*, 
+                users.full_name, 
+                users.profile_picture,
+                posts.like_count
+            FROM likes 
+            INNER JOIN users ON likes.user_id = users.id 
+            INNER JOIN posts ON likes.post_id = posts.id
+            WHERE likes.post_id = ?`;
+        
         const [likes] = await pool.query(sql, [postId]);
         return likes;
     } catch (error) {
@@ -15,6 +25,7 @@ exports.getAllLikesOfAPost = async (postId) => {
         return errMsg;
     }
 };
+
 
 exports.likePost = async (postId, userId) => {
     try {

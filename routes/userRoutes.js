@@ -7,6 +7,8 @@ const handleDefaultRoute = require("../middlewares/handleDefaultRoute")
 
 router.get('/', authenticateToken, handleDefaultRoute)
 
+router.get("/users", authenticateToken, userController.getAllUsers)
+
 router.post('/register/step_1', authController.register);
 
 router.post("/register/step_2", authenticateToken, userController.stepTwo)
