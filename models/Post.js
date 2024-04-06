@@ -36,11 +36,10 @@ exports.insertPost = async (userId, caption, media) => {
             hour: 'numeric',
             minute: 'numeric',
             second: 'numeric',
-            hour12: true // Use 12-hour format
+            hour12: true
         };
         const currentDate = date.toLocaleString('en-US', options);
 
-        // Remove the timezone part from the formatted date
         const formattedDate = currentDate.replace(/ GMT\+\d{4} \(.*\)$/, '');
 
         const mediaString = media.join(',');
