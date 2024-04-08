@@ -4,10 +4,11 @@ const userController = require('../controllers/userController');
 const authController = require("../controllers/authController")
 const authenticateToken = require('../middlewares/verifyToken');
 const handleDefaultRoute = require("../middlewares/handleDefaultRoute")
+const adminCheck = require("../middlewares/adminCheck")
 
 router.get('/', authenticateToken, handleDefaultRoute)
 
-router.get("/users", authenticateToken, userController.getAllUsers)
+router.get("/users", authenticateToken, adminCheck, userController.getAllUsers)
 
 router.post('/register/step_1', authController.register);
 
