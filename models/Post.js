@@ -9,9 +9,31 @@ exports.getAllPostsWithUserData = async () => {
             ORDER BY posts.id DESC
         `;
         const [posts] = await pool.query(sql);
-        posts.forEach(post => {
+
+        for (const post of posts) {
+            // Fetch comments for each post
+            const commentsSql = `
+                SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
+                FROM comments
+                INNER JOIN users ON comments.user_id = users.id
+                WHERE comments.post_id = ?
+            `;
+            const [comments] = await pool.query(commentsSql, [post.id]);
+            post.comments = comments;
+
+            // Fetch likes for each post
+            const likesSql = `
+                SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
+                FROM likes
+                INNER JOIN users ON likes.user_id = users.id
+                WHERE likes.post_id = ?
+            `;
+            const [likes] = await pool.query(likesSql, [post.id]);
+            post.likes = likes;
+
+            // Convert media string to array
             post.media = post.media.split(',');
-        });
+        }
 
         const response = {
             status: 200,
@@ -75,22 +97,39 @@ exports.insertPost = async (userId, caption, media) => {
     }
 };
 
-
 exports.getPostById = async (postId) => {
     try {
-        const sql = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.id = ?';
-        const [rows] = await pool.query(sql, [postId]);
+        // Fetch post details
+        const postQuery = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.id = ?';
+        const [postRows] = await pool.query(postQuery, [postId]);
 
-        if (rows.length < 1) {
-            err = {
+        if (postRows.length < 1) {
+            return {
                 status: 404,
                 message: 'Post not found'
-            }
-            return err;
+            };
         }
 
-        const post = rows[0];
+        const post = postRows[0];
         const media = post.media.split(',');
+
+        // Fetch comments of the post
+        const commentQuery = `
+            SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
+            FROM comments
+            INNER JOIN users ON comments.user_id = users.id
+            WHERE comments.post_id = ?
+        `;
+        const [commentRows] = await pool.query(commentQuery, [postId]);
+
+        // Fetch likes of the post
+        const likeQuery = `
+            SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
+            FROM likes
+            INNER JOIN users ON likes.user_id = users.id
+            WHERE likes.post_id = ?
+        `;
+        const [likeRows] = await pool.query(likeQuery, [postId]);
 
         return {
             post: {
@@ -100,43 +139,70 @@ exports.getPostById = async (postId) => {
                 user_id: post.user_id,
                 full_name: post.full_name,
                 profile_picture: post.profile_picture,
+                like_count: post.like_count,
+                comment_count: post.comment_count,
                 created_at: post.post_date,
+                comments: commentRows,
+                likes: likeRows
             },
             status: 200,
             message: 'Post retrieved successfully'
         };
     } catch (error) {
-        console.error({
+        console.error('Error getting single post:', error);
+        return {
             status: 500,
-            message: `Failed to get single post: ${error.message}`,
-            error: `Failed to get post with ID ${postId}: ${error}`
-        });
-        err = {
-            status: 500,
-            message: `Failed to get single post: ${error.message}`,
-        }
-        return err;
+            message: `Failed to get single post: ${error.message}`
+        };
     }
 };
 
-
 exports.getAllPostsByUserId = async (userId) => {
     try {
+        // Fetch posts by user ID
         const sql = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.user_id = ?';
         const [rows] = await pool.query(sql, [userId]);
 
-        const posts = rows.map(post => {
+        // Iterate through each post
+        const posts = [];
+        for (const post of rows) {
+            // Fetch comments for the current post
+            const commentsSql = `
+                SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
+                FROM comments
+                INNER JOIN users ON comments.user_id = users.id
+                WHERE comments.post_id = ?
+            `;
+            const [comments] = await pool.query(commentsSql, [post.id]);
+
+            // Fetch likes for the current post
+            const likesSql = `
+                SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
+                FROM likes
+                INNER JOIN users ON likes.user_id = users.id
+                WHERE likes.post_id = ?
+            `;
+            const [likes] = await pool.query(likesSql, [post.id]);
+
+            // Prepare post object with comments and likes
             const media = post.media.split(',');
-            return {
+            const preparedPost = {
                 id: post.id,
                 caption: post.caption,
                 media: media,
                 user_id: post.user_id,
                 full_name: post.full_name,
                 profile_picture: post.profile_picture,
+                like_count: post.like_count,
+                comment_count: post.comment_count,
                 created_at: post.post_date,
+                likes: likes,
+                comments: comments
             };
-        });
+
+            // Add the prepared post to the posts array
+            posts.push(preparedPost);
+        }
 
         return posts;
     } catch (error) {
@@ -148,6 +214,7 @@ exports.getAllPostsByUserId = async (userId) => {
         throw new Error(`Failed to get posts by user ID ${userId}: ${error.message}`);
     }
 };
+
 
 exports.updatePost = async (postId, updateFields) => {
     try {
