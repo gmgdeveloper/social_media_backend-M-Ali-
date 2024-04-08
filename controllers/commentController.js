@@ -20,7 +20,7 @@ exports.createComment = async (req, res) => {
                 message: 'Post not found'
             });
         }
-        
+
         const userCommentCount = await commentModel.getUserCommentCount(userId, postId);
         if (userCommentCount >= 3) {
             return res.status(400).json({
@@ -66,7 +66,6 @@ exports.createComment = async (req, res) => {
     }
 };
 
-
 exports.getAllCommentsOfAPost = async (req, res) => {
     const postId = parseInt(req.params.id);
     try {
@@ -97,6 +96,61 @@ exports.getAllCommentsOfAPost = async (req, res) => {
         return res.status(500).json({
             status: 500,
             message: `Failed to retrieve comments: ${error.message}`
+        });
+    }
+};
+
+exports.editComment = async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+        if (!userId) {
+            return res.status(401).json({
+                status: 401,
+                message: 'You must be logged in to edit a comment'
+            });
+        }
+
+        const commentId = parseInt(req.params.id);
+        const updatedComment = req.body.comment;
+
+        // Check if the comment exists
+        const existingComment = await commentModel.getCommentById(commentId);
+        if (!existingComment) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Comment not found'
+            });
+        }
+
+        // Check if the user is the owner of the comment
+        if (existingComment.user_id !== userId) {
+            return res.status(403).json({
+                status: 403,
+                message: 'You are not authorized to edit this comment'
+            });
+        }
+
+        // Update the comment
+        const result = await commentModel.updateComment(commentId, updatedComment);
+
+        if (result.status === 200) {
+            return res.status(result.status || 200).json({
+                status: result.status || 200,
+                message: result.message || 'Comment updated successfully',
+                comment: result.comment || updatedComment
+            });
+        } else {
+            return res.status(500).json({
+                status: 500,
+                message: 'Failed to update comment'
+            });
+        }
+    } catch (error) {
+        console.error('Error editing comment:', error);
+        return res.status(500).json({
+            status: 500,
+            message: `Internal server error: ${error.message}`
         });
     }
 };

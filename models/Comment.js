@@ -97,3 +97,31 @@ exports.getAllCommentsOfSinglePost = async (postId) => {
         };
     }
 };
+
+exports.getCommentById = async (commentId) => {
+    try {
+        const sql = 'SELECT * FROM comments WHERE id = ?';
+        const [rows] = await pool.query(sql, [commentId]);
+        return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+        console.error('Error getting comment by ID:', error);
+        return { status: 500, error: error.message };
+    }
+};
+
+exports.updateComment = async (commentId, updatedComment) => {
+    try {
+        const sql = 'UPDATE comments SET comment_text = ? WHERE id = ?';
+        const [result] = await pool.query(sql, [updatedComment, commentId]);
+        if (result.affectedRows < 1) {
+            return { status: 404, message: 'Comment not found' };
+        }
+
+        const updatedCommentData = await this.getCommentById(commentId);
+
+        return { status: 200, message: 'Comment updated successfully', comment: updatedCommentData };
+    } catch (error) {
+        console.error('Error updating comment:', error);
+        return { status: 500, error: error.message };
+    }
+};
