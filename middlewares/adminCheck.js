@@ -1,5 +1,5 @@
 const adminCheck = (req, res, next) => {
-    const isAdmin = req.user.isAdmin;
+    const isAdmin = req.user.is_admin;
 
     if (isAdmin === undefined || isAdmin === null) {
         return res.status(401).json({ status: 401, error: 'Access denied. Please log in first.' });
