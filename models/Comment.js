@@ -49,9 +49,20 @@ exports.createComment = async (userId, postId, comment) => {
     }
 };
 
+exports.getUserCommentCount = async (userId, postId) => {
+    try {
+        const sql = 'SELECT COUNT(*) AS commentCount FROM comments WHERE user_id = ? AND post_id = ?';
+        const [rows] = await pool.query(sql, [userId, postId]);
+        const { commentCount } = rows[0];
+        return commentCount;
+    } catch (error) {
+        console.error('Error retrieving user comment count:', error);
+        throw error;
+    }
+};
+
 exports.getAllCommentsOfSinglePost = async (postId) => {
     try {
-        // Check if the post ID is provided
         if (!postId) {
             throw new Error('Post ID is required');
         }

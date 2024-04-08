@@ -132,6 +132,8 @@ exports.getPostById = async (postId) => {
         const [likeRows] = await pool.query(likeQuery, [postId]);
 
         return {
+            status: 200,
+            message: 'Post retrieved successfully',
             post: {
                 id: post.id,
                 caption: post.caption,
@@ -144,9 +146,7 @@ exports.getPostById = async (postId) => {
                 created_at: post.post_date,
                 comments: commentRows,
                 likes: likeRows
-            },
-            status: 200,
-            message: 'Post retrieved successfully'
+            }
         };
     } catch (error) {
         console.error('Error getting single post:', error);
@@ -214,7 +214,6 @@ exports.getAllPostsByUserId = async (userId) => {
         throw new Error(`Failed to get posts by user ID ${userId}: ${error.message}`);
     }
 };
-
 
 exports.updatePost = async (postId, updateFields) => {
     try {
@@ -297,6 +296,34 @@ exports.updatePostLikeCount = async (postId, likeCount) => {
             message: `Failed to update post's like count: ${error.message}`,
         }
         return err
+    }
+};
+
+exports.updateCommentCount = async (postId, commentCount) => {
+    try {
+        const sql = 'UPDATE posts SET comment_count = ? WHERE id = ?';
+        const [result] = await pool.query(sql, [commentCount, postId]);
+        if (result.affectedRows < 1) {
+            err = {
+                status: 500,
+                message: `Failed to update post's comment count.`,
+            };
+            return err;
+        }
+
+        const updatedPost = await this.getPostById(postId);
+        return updatedPost;
+    } catch (error) {
+        console.error({
+            status: 500,
+            message: `Failed to update post comment count: ${error.message}`,
+            error: `Failed to update post comments ${postId}: ${error}`,
+        });
+        err = {
+            status: 500,
+            message: `Failed to update post's comment count: ${error.message}`,
+        };
+        return err;
     }
 };
 

@@ -101,9 +101,9 @@ exports.getAllPosts = async (req, res) => {
     try {
         const posts = await postModel.getAllPostsWithUserData();
         res.status(200).json({
-            status: 200,
-            message: 'Posts fetched successfully',
-            posts: posts
+            status: posts.status || 200,
+            message: posts.message || 'Posts fetched successfully',
+            posts: posts.posts
         });
     } catch (error) {
         console.error('Error fetching posts:', error);
@@ -128,9 +128,9 @@ exports.getSinglePost = async (req, res) => {
         }
 
         res.status(200).json({
-            status: 200,
-            message: 'Post fetched successfully',
-            post: post
+            status: post.status || 200,
+            message: post.message || 'Post fetched successfully',
+            post: post.post
         });
     } catch (error) {
         console.error('Error fetching post:', error);

@@ -20,12 +20,32 @@ exports.createComment = async (req, res) => {
                 message: 'Post not found'
             });
         }
+        
+        const userCommentCount = await commentModel.getUserCommentCount(userId, postId);
+        if (userCommentCount >= 3) {
+            return res.status(400).json({
+                status: 400,
+                message: 'You have reached the maximum limit of comments on this post'
+            });
+        }
 
         const { comment } = req.body;
 
         const newComment = await commentModel.createComment(userId, postId, comment);
 
         if (newComment.status === 201) {
+
+            const comments = await commentModel.getAllCommentsOfSinglePost(postId);
+            const commentCount = parseInt(comments.comments.length);
+
+            const updatedCommentCount = await postModel.updateCommentCount(postId, commentCount);
+            if (updatedCommentCount.status === 500) {
+                return res.status(400).json({
+                    status: 400,
+                    message: 'Cannot update post comment count because the post does not exist or has been deleted'
+                });
+            }
+
             return res.status(201).json({
                 status: 201,
                 message: 'Comment created successfully',
@@ -46,6 +66,7 @@ exports.createComment = async (req, res) => {
     }
 };
 
+
 exports.getAllCommentsOfAPost = async (req, res) => {
     const postId = parseInt(req.params.id);
     try {
@@ -58,7 +79,7 @@ exports.getAllCommentsOfAPost = async (req, res) => {
         }
 
         const commentsResult = await commentModel.getAllCommentsOfSinglePost(postId);
-        
+
         if (commentsResult.status === 200) {
             return res.status(200).json({
                 status: 200,
