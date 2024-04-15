@@ -11,7 +11,6 @@ exports.getAllPostsWithUserData = async () => {
         const [posts] = await pool.query(sql);
 
         for (const post of posts) {
-            // Fetch comments for each post
             const commentsSql = `
                 SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
                 FROM comments
@@ -21,7 +20,6 @@ exports.getAllPostsWithUserData = async () => {
             const [comments] = await pool.query(commentsSql, [post.id]);
             post.comments = comments;
 
-            // Fetch likes for each post
             const likesSql = `
                 SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
                 FROM likes
@@ -31,7 +29,6 @@ exports.getAllPostsWithUserData = async () => {
             const [likes] = await pool.query(likesSql, [post.id]);
             post.likes = likes;
 
-            // Convert media string to array
             post.media = post.media.split(',');
         }
 
@@ -99,7 +96,6 @@ exports.insertPost = async (userId, caption, media) => {
 
 exports.getPostById = async (postId) => {
     try {
-        // Fetch post details
         const postQuery = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.id = ?';
         const [postRows] = await pool.query(postQuery, [postId]);
 
@@ -159,14 +155,11 @@ exports.getPostById = async (postId) => {
 
 exports.getAllPostsByUserId = async (userId) => {
     try {
-        // Fetch posts by user ID
         const sql = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.user_id = ?';
         const [rows] = await pool.query(sql, [userId]);
 
-        // Iterate through each post
         const posts = [];
         for (const post of rows) {
-            // Fetch comments for the current post
             const commentsSql = `
                 SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
                 FROM comments
@@ -175,7 +168,6 @@ exports.getAllPostsByUserId = async (userId) => {
             `;
             const [comments] = await pool.query(commentsSql, [post.id]);
 
-            // Fetch likes for the current post
             const likesSql = `
                 SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
                 FROM likes
@@ -184,7 +176,6 @@ exports.getAllPostsByUserId = async (userId) => {
             `;
             const [likes] = await pool.query(likesSql, [post.id]);
 
-            // Prepare post object with comments and likes
             const media = post.media.split(',');
             const preparedPost = {
                 id: post.id,
@@ -200,7 +191,6 @@ exports.getAllPostsByUserId = async (userId) => {
                 comments: comments
             };
 
-            // Add the prepared post to the posts array
             posts.push(preparedPost);
         }
 
@@ -235,7 +225,6 @@ exports.updatePost = async (postId, updateFields) => {
             if (key !== 'media') {
                 sqlFields += `${key} = ?`;
                 values.push(updateFields[key]);
-
             } else {
                 mediaValues.push(updateFields[key]);
             }

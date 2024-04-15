@@ -96,6 +96,47 @@ exports.getLoggedInUser = async (req, res) => {
     }
 }
 
+exports.getUserProfileById = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        const user = await userModel.getUserByField('id', userId);
+
+        if (!user) {
+            return res.status(404).json({
+                status: 404,
+                error: 'User not found'
+            });
+        }
+
+        const posts = await postModel.getAllPostsByUserId(userId);
+
+        res.status(200).json({
+            status: 200,
+            message: 'User profile fetched successfully',
+            user: {
+                id: user.id,
+                name: user.full_name,
+                email: user.email,
+                bio: user.bio,
+                profile_pic: user.profile_picture,
+                cover: user.cover_picture,
+                role: user.role,
+                is_admin: user.is_admin,
+                is_active: user.is_active,
+                registration_date: user.registration_date
+            },
+            posts: posts
+        });
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
+        res.status(500).json({
+            status: 500,
+            error: 'Internal server error'
+        });
+    }
+};
+
 exports.stepTwo = async (req, res) => {
     const { bio } = req.body;
 

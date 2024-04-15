@@ -49,7 +49,8 @@ exports.createComment = async (req, res) => {
             return res.status(201).json({
                 status: 201,
                 message: 'Comment created successfully',
-                comment: newComment.comment
+                comment: newComment.comment,
+                commentCount: commentCount
             });
         } else {
             return res.status(500).json({
@@ -114,7 +115,6 @@ exports.editComment = async (req, res) => {
         const commentId = parseInt(req.params.id);
         const updatedComment = req.body.comment;
 
-        // Check if the comment exists
         const existingComment = await commentModel.getCommentById(commentId);
         if (!existingComment) {
             return res.status(404).json({
@@ -123,7 +123,6 @@ exports.editComment = async (req, res) => {
             });
         }
 
-        // Check if the user is the owner of the comment
         if (existingComment.user_id !== userId) {
             return res.status(403).json({
                 status: 403,
@@ -131,7 +130,6 @@ exports.editComment = async (req, res) => {
             });
         }
 
-        // Update the comment
         const result = await commentModel.updateComment(commentId, updatedComment);
 
         if (result.status === 200) {
