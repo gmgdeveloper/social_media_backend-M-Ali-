@@ -28,8 +28,7 @@ exports.getAllPostsWithUserData = async () => {
             `;
             const [likes] = await pool.query(likesSql, [post.id]);
             post.likes = likes;
-
-            post.media = post.media.split(',');
+            post.media = post.media ? post.media.split(',') : [];
         }
 
         const response = {
@@ -43,6 +42,7 @@ exports.getAllPostsWithUserData = async () => {
         throw error;
     }
 };
+
 
 exports.insertPost = async (userId, caption, media) => {
     try {
@@ -58,13 +58,30 @@ exports.insertPost = async (userId, caption, media) => {
             hour12: true
         };
         const currentDate = date.toLocaleString('en-US', options);
-
         const formattedDate = currentDate.replace(/ GMT\+\d{4} \(.*\)$/, '');
 
-        const mediaString = media.join(',');
+        let values = [userId];
+        let sql = 'INSERT INTO posts (user_id';
 
-        const values = [userId, caption, mediaString, formattedDate];
-        const sql = 'INSERT INTO posts (user_id, caption, media, post_date) VALUES (?, ?, ?, ?)';
+        if (caption) {
+            sql += ', caption';
+            values.push(caption);
+        }
+
+        if (media && media.length > 0) {
+            sql += ', media';
+            const mediaString = media.join(',');
+            values.push(mediaString);
+        }
+
+        sql += ', post_date) VALUES (?';
+        values.push(formattedDate);
+
+        for (let i = 1; i < values.length; i++) {
+            sql += ', ?';
+        }
+        sql += ')';
+
         const [result] = await pool.query(sql, values);
 
         if (result.affectedRows < 1) {
@@ -107,9 +124,7 @@ exports.getPostById = async (postId) => {
         }
 
         const post = postRows[0];
-        const media = post.media.split(',');
-
-        // Fetch comments of the post
+        const media = post.media ? post.media.split(',') : [];
         const commentQuery = `
             SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
             FROM comments
@@ -118,7 +133,6 @@ exports.getPostById = async (postId) => {
         `;
         const [commentRows] = await pool.query(commentQuery, [postId]);
 
-        // Fetch likes of the post
         const likeQuery = `
             SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
             FROM likes
@@ -160,23 +174,14 @@ exports.getAllPostsByUserId = async (userId) => {
 
         const posts = [];
         for (const post of rows) {
-            const commentsSql = `
-                SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture
-                FROM comments
-                INNER JOIN users ON comments.user_id = users.id
-                WHERE comments.post_id = ?
-            `;
+            const commentsSql = `SELECT comments.*, users.full_name AS commenter_name, users.profile_picture AS commenter_profile_picture FROM comments INNER JOIN users ON comments.user_id = users.id WHERE comments.post_id = ?`;
             const [comments] = await pool.query(commentsSql, [post.id]);
 
-            const likesSql = `
-                SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture
-                FROM likes
-                INNER JOIN users ON likes.user_id = users.id
-                WHERE likes.post_id = ?
-            `;
+            const likesSql = `SELECT likes.*, users.full_name AS liker_name, users.profile_picture AS liker_profile_picture FROM likes INNER JOIN users ON likes.user_id = users.id WHERE likes.post_id = ?`;
             const [likes] = await pool.query(likesSql, [post.id]);
 
-            const media = post.media.split(',');
+            const media = post.media ? post.media.split(',') : [];
+
             const preparedPost = {
                 id: post.id,
                 caption: post.caption,
@@ -204,6 +209,7 @@ exports.getAllPostsByUserId = async (userId) => {
         throw new Error(`Failed to get posts by user ID ${userId}: ${error.message}`);
     }
 };
+
 
 exports.updatePost = async (postId, updateFields) => {
     try {

@@ -13,6 +13,13 @@ exports.followUser = async (req, res) => {
             });
         }
 
+        if (followerId === followingId) {
+            return res.status(400).json({
+                status: 400,
+                message: 'You cannot follow yourself'
+            })
+        }
+
         const result = await FollowModel.followUser(followerId, followingId);
 
         if (result.status === 201) {

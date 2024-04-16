@@ -5,17 +5,24 @@ const Joi = require('joi');
 const env = require("dotenv")
 env.config();
 
-
 const registerSchema = Joi.object({
     first_name: Joi.string().required(),
     last_name: Joi.string().required(),
     email: Joi.string().email().required(),
-    password: Joi.string().min(8).required(),
+    password: Joi.string()
+        .min(8)
+        .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])'))
+        .required()
+        .messages({
+            'string.pattern.base': 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character',
+            'string.min': 'Password must be at least 8 characters long',
+            'any.required': 'Password is required'
+        }),
     confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
         'any.only': 'Confirm Password must match Password',
         'any.required': 'Confirm Password is required'
     }),
-});
+}).options({ abortEarly: false });
 
 
 const loginSchema = Joi.object({
@@ -153,6 +160,7 @@ exports.login = async (req, res) => {
             email: user.email,
             bio: user.bio,
             profile_picture: user.profile_picture,
+            cover_picture: user.cover_picture,
             role: user.role,
             is_admin: user.is_admin,
             is_active: user.is_active,

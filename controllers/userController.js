@@ -1,7 +1,10 @@
 const userModel = require('../models/User');
 const postModel = require("../models/Post");
+const followModel = require("../models/Follow");
 const multer = require('multer');
 const path = require('path');
+const env = require('dotenv');
+env.config()
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -13,7 +16,8 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const prefix = file.fieldname === 'profile' ? 'profile-' : 'cover-';
-        cb(null, prefix + Date.now() + "-" + file.originalname);
+        const fileNameWithoutSpaces = file.originalname.replace(/\s+/g, '_');
+        cb(null, prefix + '-' + Date.now() + "-" + fileNameWithoutSpaces);
     }
 });
 
@@ -62,31 +66,33 @@ exports.getLoggedInUser = async (req, res) => {
 
         const posts = await postModel.getAllPostsByUserId(id);
 
-        if (user.id == req.user.id) {
-            res.status(200).json({
-                status: 200,
-                message: 'User fetched successfully',
-                user: {
-                    id: user.id,
-                    name: user.full_name,
-                    email: user.email,
-                    bio: user.bio,
-                    profile_pic: user.profile_picture,
-                    cover: user.cover_picture,
-                    role: user.role,
-                    is_admin: user.is_admin,
-                    is_active: user.is_active,
-                    registration_date: user.registration_date
-                },
-                posts: posts
-            })
-        } else (
-            res.status(404).json({
-                status: 404,
-                error: 'User not found'
-            })
-        )
+        const followersResponse = await followModel.getFollowers(id);
+        const followers = followersResponse.status === 200 ? followersResponse.followers : [];
 
+        const followingResponse = await followModel.getFollowing(id);
+        const following = followingResponse.status === 200 ? followingResponse.following : [];
+
+        res.status(200).json({
+            status: 200,
+            message: 'User fetched successfully',
+            user: {
+                id: user.id,
+                name: user.full_name,
+                email: user.email,
+                bio: user.bio,
+                profile_pic: user.profile_picture,
+                cover_pic: user.cover_picture,
+                role: user.role,
+                is_admin: user.is_admin,
+                is_active: user.is_active,
+                registration_date: user.registration_date,
+                followers_count: followers.length,
+                following_count: following.length
+            },
+            followers: followers,
+            following: following,
+            posts: posts
+        });
     } catch (error) {
         console.error('Error fetching user:', error);
         res.status(500).json({
@@ -109,6 +115,12 @@ exports.getUserProfileById = async (req, res) => {
             });
         }
 
+        const followersResponse = await followModel.getFollowers(userId);
+        const followers = followersResponse.status === 200 ? followersResponse.followers : [];
+
+        const followingResponse = await followModel.getFollowing(userId);
+        const following = followingResponse.status === 200 ? followingResponse.following : [];
+
         const posts = await postModel.getAllPostsByUserId(userId);
 
         res.status(200).json({
@@ -124,8 +136,12 @@ exports.getUserProfileById = async (req, res) => {
                 role: user.role,
                 is_admin: user.is_admin,
                 is_active: user.is_active,
-                registration_date: user.registration_date
+                registration_date: user.registration_date,
+                followers_count: followers.length,
+                following_count: following.length
             },
+            followers: followers,
+            following: following,
             posts: posts
         });
     } catch (error) {
@@ -216,8 +232,12 @@ exports.stepThree = async (req, res) => {
 
             const userId = req.user.id;
 
-            const profileImagePath = req.files['profile'][0].filename;
-            const coverImagePath = req.files['cover'][0].filename;
+            const BASE_URL = process.env.BASE_URL || 'http://localhost';
+            const PORT = process.env.PORT || 8000;
+
+            const profileImagePath = `${BASE_URL}:${PORT}/uploads/profiles/${req.files['profile'][0].filename}`;
+            const coverImagePath = `${BASE_URL}:${PORT}/uploads/covers/${req.files['cover'][0].filename}`;
+
 
             const updatedUser = await userModel.updateUserFields(userId, {
                 profile_picture: profileImagePath,

@@ -1,6 +1,11 @@
 const postModel = require('../models/Post');
 const multer = require('multer');
 const path = require('path');
+const env = require("dotenv")
+env.config()
+
+const baseUrl = process.env.BASE_URL || 'http://localhost';
+const port = process.env.PORT || 8000;
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -20,8 +25,10 @@ const storage = multer.diskStorage({
         cb(null, destPath);
     },
     filename: function (req, file, cb) {
-        cb(null, file.fieldname + '-' + Date.now() + "-" + file.originalname);
+        const fileNameWithoutSpaces = file.originalname.replace(/\s+/g, '_');
+        cb(null, file.fieldname + '-' + Date.now() + "-" + fileNameWithoutSpaces);
     }
+    
 });
 
 const upload = multer({
@@ -56,14 +63,14 @@ exports.createPost = async (req, res) => {
             }
 
             const user_id = req.user.id;
-
             const { caption } = req.body;
-
             let media = [];
+
             if (req.files && req.files.length > 0) {
-                media = req.files.map(file => file.filename);
-            } else if (req.file) {
-                media.push(req.file.filename);
+                media = req.files.map(file => {
+                    const mediaType = file.mimetype.startsWith('image') ? 'images' : 'videos';
+                    return `${baseUrl}:${port}/uploads/posts/${mediaType}/${file.filename}`;
+                });
             }
 
             if (!caption && media.length === 0) {
@@ -96,6 +103,7 @@ exports.createPost = async (req, res) => {
         });
     }
 };
+
 
 exports.getAllPosts = async (req, res) => {
     try {
