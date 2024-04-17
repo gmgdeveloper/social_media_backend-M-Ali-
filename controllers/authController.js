@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const userModel = require('../models/User');
+const sendMail = require("../helpers/sendMail")
+const generateToken = require("../helpers/generateToken")
 const Joi = require('joi');
 const env = require("dotenv")
 env.config();
@@ -31,6 +33,10 @@ const loginSchema = Joi.object({
         'string.email': 'Email must be a valid email address'
     }),
     password: Joi.string().min(8).required()
+});
+
+const forgetPasswordSchema = Joi.object({
+    email: Joi.string().email().required(),
 });
 
 const activeSessions = {};
@@ -199,6 +205,67 @@ exports.logout = async (req, res) => {
         res.status(500).json({
             status: 500,
             error: error.message
+        });
+    }
+};
+
+exports.forgetPassword = async (req, res) => {
+    const { error } = forgetPasswordSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            status: 400,
+            error: error.details[0].message
+        });
+    }
+
+    const { email } = req.body;
+
+    try {
+        const user = await userModel.getUserByField("email", email);
+        if (!user) {
+            return res.status(401).json({
+                status: 401,
+                error: 'Invalid email!'
+            });
+        }
+
+        const resetToken = generateToken(user.id);
+
+        const updateUserResult = await userModel.updateUserFields(user.id, { reset_token: resetToken }, 'Reset token generated successfully');
+
+        if (updateUserResult.status !== 200) {
+            return res.status(updateUserResult.status).json({
+                status: updateUserResult.status,
+                error: updateUserResult.message
+            });
+        }
+
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+        const message = `Hello ${user.first_name},\n\nYou have requested to reset your password. Please follow this link to reset your password: ${resetLink}`;
+
+        try {
+            await sendMail(user.email, 'Password Reset Request', message);
+
+            res.status(200).json({
+                status: 200,
+                message: 'Password reset email sent successfully'
+            });
+        } catch (error) {
+            console.error('Error sending password reset email:', error);
+            // If sending email fails, clear the reset_token
+            await userModel.updateUserFields(user.id, { reset_token: null }, 'Reset token cleared');
+            res.status(500).json({
+                status: 500,
+                error: 'Error sending password reset email'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({
+            status: 500,
+            error: 'Internal server error'
         });
     }
 };

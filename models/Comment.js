@@ -26,14 +26,19 @@ exports.createComment = async (userId, postId, comment) => {
         const values = [comment, postId, userId, formattedDate];
         const result = await pool.query(query, values);
 
-        if (result.affectedRows < 1) {
-            throw new Error('Failed to create comment');
+
+        if (result[0].affectedRows < 1) {
+            console.error('Failed to create comment');
+            return { status: 500, message: 'Failed to create comment' };
         }
+
+        const commentId = result[0].insertId;
 
         return {
             status: 201,
             message: 'Comment created successfully',
             comment: {
+                id: commentId,
                 comment_text: comment,
                 post_id: postId,
                 user_id: userId,
@@ -48,6 +53,7 @@ exports.createComment = async (userId, postId, comment) => {
         };
     }
 };
+
 
 exports.getUserCommentCount = async (userId, postId) => {
     try {
@@ -123,5 +129,32 @@ exports.updateComment = async (commentId, updatedComment) => {
     } catch (error) {
         console.error('Error updating comment:', error);
         return { status: 500, error: error.message };
+    }
+};
+
+exports.deleteComment = async (commentId) => {
+    try {
+        const sql = 'DELETE FROM comments WHERE id = ?';
+        const [result] = await pool.query(sql, [commentId]);
+
+        if (result.affectedRows !== 1) {
+            return {
+                status: 404,
+                message: 'Comment not found or could not be deleted',
+                error: 'Comment not found or could not be deleted'
+            };
+        }
+
+        return {
+            status: 200,
+            message: 'Comment deleted successfully'
+        };
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        return {
+            status: 500,
+            message: 'Internal server error',
+            error: error.message
+        };
     }
 };

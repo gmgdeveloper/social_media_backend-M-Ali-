@@ -18,6 +18,8 @@ router.post("/register/step_3", authenticateToken, userController.stepThree)
 
 router.post('/login', authController.login);
 
+router.post('/forget-password', authController.forgetPassword);
+
 router.post("/logout", authController.logout)
 
 router.get('/profile', authenticateToken, userController.getLoggedInUser);

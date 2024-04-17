@@ -28,7 +28,7 @@ const storage = multer.diskStorage({
         const fileNameWithoutSpaces = file.originalname.replace(/\s+/g, '_');
         cb(null, file.fieldname + '-' + Date.now() + "-" + fileNameWithoutSpaces);
     }
-    
+
 });
 
 const upload = multer({
@@ -302,8 +302,8 @@ exports.deletePostById = async (req, res) => {
 
         if (deleteResult.status === 200) {
             res.status(deleteResult.status).json({
-                status: deleteResult.status,
-                message: 'Post deleted successfully'
+                status: deleteResult.status || 200,
+                message: deleteResult.message || 'Post deleted successfully'
             });
         } else {
             res.status(deleteResult.status).json({

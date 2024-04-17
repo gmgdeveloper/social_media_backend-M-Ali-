@@ -73,7 +73,6 @@ exports.createUser = async ({ first_name, last_name, full_name, email, password,
     }
 };
 
-
 exports.updateUserFields = async (id, fieldsToUpdate, successMsg) => {
     try {
         const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');

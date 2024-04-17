@@ -152,3 +152,62 @@ exports.editComment = async (req, res) => {
         });
     }
 };
+
+exports.deleteCommentById = async (req, res) => {
+    try {
+        const commentId = req.params.id;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const comment = await commentModel.getCommentById(commentId);
+
+        if (!comment) {
+            return res.status(404).json({
+                status: 404,
+                error: 'Comment not found'
+            });
+        }
+
+        if (userRole === 'admin' && req.user.is_admin === 1) {
+            const deleteResult = await commentModel.deleteComment(commentId);
+            if (deleteResult.status === 200) {
+                return res.status(deleteResult.status).json({
+                    status: deleteResult.status,
+                    message: 'Comment deleted successfully'
+                });
+            } else {
+                return res.status(deleteResult.status).json({
+                    status: deleteResult.status,
+                    error: deleteResult.error || 'Internal server error'
+                });
+            }
+        }
+
+        if (comment.user_id !== userId) {
+            return res.status(401).json({
+                status: 401,
+                error: 'You are not authorized to delete this comment'
+            });
+        }
+
+        const deleteResult = await commentModel.deleteComment(commentId);
+
+        if (deleteResult.status === 200) {
+            res.status(deleteResult.status).json({
+                status: deleteResult.status || 200,
+                message: deleteResult.message || 'Comment deleted successfully'
+            });
+        } else {
+            res.status(deleteResult.status).json({
+                status: deleteResult.status || 500,
+                error: deleteResult.error || 'Internal server error'
+            });
+        }
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        res.status(500).json({
+            status: 500,
+            error: `Internal server error: ${error.message}`
+        });
+    }
+};

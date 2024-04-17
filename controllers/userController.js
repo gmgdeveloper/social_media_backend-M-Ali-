@@ -81,7 +81,7 @@ exports.getLoggedInUser = async (req, res) => {
                 email: user.email,
                 bio: user.bio,
                 profile_pic: user.profile_picture,
-                cover_pic: user.cover_picture,
+                cover: user.cover_picture,
                 role: user.role,
                 is_admin: user.is_admin,
                 is_active: user.is_active,
