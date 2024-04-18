@@ -43,7 +43,6 @@ exports.getAllPostsWithUserData = async () => {
     }
 };
 
-
 exports.insertPost = async (userId, caption, media) => {
     try {
         const date = new Date();

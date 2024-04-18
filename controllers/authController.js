@@ -39,6 +39,31 @@ const forgetPasswordSchema = Joi.object({
     email: Joi.string().email().required(),
 });
 
+const resetPasswordSchema = Joi.object({
+    newPassword: Joi.string().min(8).required(),
+    confirmNewPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+        'any.only': 'Confirm Password must match New Password',
+        'any.required': 'Confirm Password is required'
+    }),
+});
+
+const changePasswordSchema = Joi.object({
+    oldPassword: Joi.string().required(),
+    newPassword: Joi.string()
+        .min(8)
+        .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])'))
+        .required()
+        .messages({
+            'string.pattern.base': 'New password must contain at least one lowercase letter, one uppercase letter, one number, and one special character',
+            'string.min': 'New password must be at least 8 characters long',
+            'any.required': 'New password is required'
+        }),
+    confirmNewPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+        'any.only': 'Confirm new password must match new password',
+        'any.required': 'Confirm new password is required'
+    }),
+});
+
 const activeSessions = {};
 
 exports.register = async (req, res) => {
@@ -210,17 +235,17 @@ exports.logout = async (req, res) => {
 };
 
 exports.forgetPassword = async (req, res) => {
-    const { error } = forgetPasswordSchema.validate(req.body);
-    if (error) {
-        return res.status(400).json({
-            status: 400,
-            error: error.details[0].message
-        });
-    }
-
-    const { email } = req.body;
-
     try {
+        const { error } = forgetPasswordSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                error: error.details[0].message
+            });
+        }
+
+        const { email } = req.body;
+
         const user = await userModel.getUserByField("email", email);
         if (!user) {
             return res.status(401).json({
@@ -229,7 +254,7 @@ exports.forgetPassword = async (req, res) => {
             });
         }
 
-        const resetToken = generateToken(user.id);
+        const resetToken = generateToken(20);
 
         const updateUserResult = await userModel.updateUserFields(user.id, { reset_token: resetToken }, 'Reset token generated successfully');
 
@@ -240,22 +265,30 @@ exports.forgetPassword = async (req, res) => {
             });
         }
 
-        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        const resetLink = `${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}/reset-password`;
 
         const message = `Hello ${user.first_name},\n\nYou have requested to reset your password. Please follow this link to reset your password: ${resetLink}`;
 
         try {
-            await sendMail(user.email, 'Password Reset Request', message);
+            const mail = await sendMail(user.email, 'Password Reset Request', message);
 
-            res.status(200).json({
-                status: 200,
-                message: 'Password reset email sent successfully'
-            });
+            if (mail.status === 200) {
+                return res.status(200).json({
+                    status: 200,
+                    message: 'Password reset email sent successfully',
+                    resetToken: resetToken
+                });
+            } else {
+                await userModel.updateUserFields(user.id, { reset_token: null }, 'Reset token cleared');
+                return res.status(500).json({
+                    status: 500,
+                    error: 'Error sending password reset email'
+                });
+            }
         } catch (error) {
             console.error('Error sending password reset email:', error);
-            // If sending email fails, clear the reset_token
             await userModel.updateUserFields(user.id, { reset_token: null }, 'Reset token cleared');
-            res.status(500).json({
+            return res.status(500).json({
                 status: 500,
                 error: 'Error sending password reset email'
             });
@@ -263,9 +296,133 @@ exports.forgetPassword = async (req, res) => {
 
     } catch (error) {
         console.error('Error resetting password:', error);
-        res.status(500).json({
+        return res.status(500).json({
             status: 500,
             error: 'Internal server error'
         });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { error, value } = resetPasswordSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                error: error.details[0].message
+            });
+        }
+        const token = req.header('resetToken')
+        const { newPassword, confirmNewPassword } = value;
+
+        const user = await userModel.getUserByField("reset_token", token);
+
+        if (!user) {
+            return res.status(400).json({
+                status: 400,
+                error: 'Invalid reset token!'
+            });
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({
+                status: 400,
+                error: 'Passwords do not match!'
+            });
+        }
+
+        const oldPassCheck = await bcrypt.compare(newPassword, user.password);
+        if (oldPassCheck) {
+            return res.status(400).json({
+                status: 400,
+                error: 'New password cannot be the same as the old password!',
+            })
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const updateUserResult = await userModel.updateUserFields(user.id, { password: hashedPassword, reset_token: null }, 'Password reset successfully');
+
+        if (updateUserResult.status === 200) {
+            const msg = `Hello ${user.first_name},\n\nYour password has been reset successfully.`;
+            const subject = 'Password Reset Confirmation';
+            try {
+                const mail = await sendMail(user.email, subject, msg);
+                return res.status(mail.status || 200).json({
+                    status: mail.status || 200,
+                    message: 'Password reset successfully'
+                });
+            } catch (error) {
+                console.error('Error sending password reset email:', error);
+                await userModel.updateUserFields(user.id, { reset_token: null }, 'Reset token cleared');
+                return res.status(500).json({
+                    status: 500,
+                    error: 'Error sending password reset email'
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        return res.status(500).json({
+            status: 500,
+            error: 'Internal server error'
+        });
+    }
+};
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { error, value } = changePasswordSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ status: 400, error: error.details[0].message });
+        }
+
+        const userId = req.user.id;
+
+        const { oldPassword, newPassword } = value;
+
+        const user = await userModel.getUserByField("id", userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, error: 'User not found' });
+        }
+
+        const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ status: 401, error: 'Incorrect old password' });
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        const updatedUser = await userModel.updateUserFields(userId, { password: hashedNewPassword }, 'Password changed successfully');
+
+        if (updatedUser.status === 200) {
+            try {
+                const message = `Hello ${user.first_name},\n\nYour password has been changed successfully.`;
+                const subject = 'Password Change Notification';
+                await sendMail(user.email, subject, message);
+            } catch (emailError) {
+                console.error('Error sending password change email:', emailError);
+                err = {
+                    status: 500,
+                    message: `Password has been changed successfully.`,
+                    error: `Couldn't send email because of an internal server error.`
+                }
+                return err
+            }
+            return res.status(200).json({
+                status: 200,
+                message: 'Password changed successfully'
+            });
+        } else {
+            err = {
+                status: updatedUser.status,
+                message: updatedUser.message,
+                error: updatedUser.error
+            }
+            return err
+        }
+
+    } catch (error) {
+        console.error('Error changing password:', error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
     }
 };

@@ -11,6 +11,7 @@ const postRoutes = require("./routes/postRoutes");
 const likeRoutes = require("./routes/likeRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const followRoutes = require('./routes/followRoutes');
+const galleryRoutes = require('./routes/galleryRoutes');
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -23,6 +24,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/likes", likeRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/follows", followRoutes);
+app.use("/api/gallery", galleryRoutes);
 
 const PORT = process.env.PORT || 8080;
 const BASE_URL = process.env.BASE_URL;

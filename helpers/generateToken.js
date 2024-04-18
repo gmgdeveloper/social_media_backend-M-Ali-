@@ -1,9 +1,10 @@
-const env = require('dotenv').config();
-const jwt = require('jsonwebtoken');
-
-const generateToken = (userId) => {
-    const token = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+const generateShortToken = (length) => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < length; i++) {
+        token += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
     return token;
 };
 
-module.exports = generateToken;
+module.exports = generateShortToken;

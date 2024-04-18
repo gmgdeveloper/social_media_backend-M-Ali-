@@ -20,6 +20,10 @@ router.post('/login', authController.login);
 
 router.post('/forget-password', authController.forgetPassword);
 
+router.post('/reset-password/', authController.resetPassword);
+
+router.post('/change-password', authenticateToken, authController.changePassword);
+
 router.post("/logout", authController.logout)
 
 router.get('/profile', authenticateToken, userController.getLoggedInUser);
