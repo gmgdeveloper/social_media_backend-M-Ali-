@@ -286,12 +286,16 @@ exports.deletePostById = async (req, res) => {
             } else {
                 return res.status(deleteResult.status).json({
                     status: deleteResult.status,
-                    error: deleteResult.error.message || 'Internal server error'
+                    error: deleteResult.error || 'Internal server error'
                 });
             }
         }
 
-        if (post.post.user_id !== userId) {
+        console.log(post.post.user_id, "post user_id");
+        console.log("userId", userId);
+        console.log('post', post);
+
+        if (post.post.user_id !== userId) { // Fixed typo here
             return res.status(401).json({
                 status: 401,
                 error: 'You are not authorized to delete this post'

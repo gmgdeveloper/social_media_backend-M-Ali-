@@ -21,6 +21,15 @@ exports.createComment = async (req, res) => {
             });
         }
 
+        const { comment } = req.body;
+
+        if (!comment || comment.trim() === '') {
+            return res.status(400).json({
+                status: 400,
+                message: 'Please provide a non-empty comment text.'
+            });
+        }
+
         const userCommentCount = await commentModel.getUserCommentCount(userId, postId);
         if (userCommentCount >= 3) {
             return res.status(400).json({
@@ -29,14 +38,11 @@ exports.createComment = async (req, res) => {
             });
         }
 
-        const { comment } = req.body;
-
         const newComment = await commentModel.createComment(userId, postId, comment);
 
         if (newComment.status === 201) {
-
             const comments = await commentModel.getAllCommentsOfSinglePost(postId);
-            const commentCount = parseInt(comments.comments.length);
+            const commentCount = comments.comments.length;
 
             const updatedCommentCount = await postModel.updateCommentCount(postId, commentCount);
             if (updatedCommentCount.status === 500) {
@@ -97,6 +103,58 @@ exports.getAllCommentsOfAPost = async (req, res) => {
         return res.status(500).json({
             status: 500,
             message: `Failed to retrieve comments: ${error.message}`
+        });
+    }
+};
+
+exports.getAllComments = async (req, res) => {
+    try {
+        const commentsResult = await commentModel.getAllComments();
+
+        if (commentsResult.status === 200) {
+            res.status(200).json({
+                status: 200,
+                message: 'Comments retrieved successfully',
+                comments: commentsResult.comments
+            });
+        } else {
+            res.status(commentsResult.status).json({
+                status: commentsResult.status,
+                message: commentsResult.message
+            });
+        }
+    } catch (error) {
+        console.error('Error retrieving comments:', error);
+        res.status(500).json({
+            status: 500,
+            message: `Failed to retrieve comments: ${error.message}`
+        });
+    }
+};
+
+exports.getCommentById = async (req, res) => {
+    try {
+        const commentId = req.params.id;
+
+        const comment = await commentModel.getCommentById(commentId);
+
+        if (comment) {
+            return res.status(200).json({
+                status: 200,
+                message: 'Comment retrieved successfully',
+                comment: comment
+            });
+        } else {
+            return res.status(404).json({
+                status: 404,
+                message: 'Comment not found'
+            });
+        }
+    } catch (error) {
+        console.error('Error retrieving comment:', error);
+        return res.status(500).json({
+            status: 500,
+            message: `Failed to retrieve comment: ${error.message}`
         });
     }
 };
@@ -168,9 +226,22 @@ exports.deleteCommentById = async (req, res) => {
             });
         }
 
+        const post = await postModel.getPostById(comment.post_id);
+        if (!post) {
+            return res.status(404).json({
+                status: 404,
+                error: 'Associated post not found'
+            });
+        }
+
+        const comments = await commentModel.getAllCommentsOfSinglePost(comment.post_id);
+        const comment_count = comments.comments.length;
+
         if (userRole === 'admin' && req.user.is_admin === 1) {
             const deleteResult = await commentModel.deleteComment(commentId);
             if (deleteResult.status === 200) {
+                await postModel.updateCommentCount(comment.post_id, comment_count - 1);
+
                 return res.status(deleteResult.status).json({
                     status: deleteResult.status,
                     message: 'Comment deleted successfully'
@@ -193,6 +264,8 @@ exports.deleteCommentById = async (req, res) => {
         const deleteResult = await commentModel.deleteComment(commentId);
 
         if (deleteResult.status === 200) {
+            await postModel.updateCommentCount(comment.post_id, comment_count - 1);
+
             res.status(deleteResult.status).json({
                 status: deleteResult.status || 200,
                 message: deleteResult.message || 'Comment deleted successfully'

@@ -126,7 +126,7 @@ exports.register = async (req, res) => {
                 registration_date: newUser.data.registration_date
             };
 
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '4h' });
+            const token = jwt.sign(payload, process.env.JWT_SECRET);
 
             res.setHeader('Authorization', `${token}`);
 
@@ -198,7 +198,7 @@ exports.login = async (req, res) => {
             registration_date: user.registration_date
         };
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '4h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET);
 
         activeSessions[user.id] = token;
         res.setHeader('Authorization', `${token}`)

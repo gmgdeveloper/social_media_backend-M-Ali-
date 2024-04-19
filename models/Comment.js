@@ -1,12 +1,12 @@
 const pool = require('../config/db');
 
-exports.createComment = async (userId, postId, comment) => {
+exports.createComment = async (userId, postId, commentText) => {
     try {
         if (!userId || !postId) {
             throw new Error('User ID and post ID are required');
         }
 
-        if (!comment) {
+        if (!commentText) {
             throw new Error('Comment text is required');
         }
 
@@ -23,9 +23,8 @@ exports.createComment = async (userId, postId, comment) => {
         }).replace(/ GMT\+\d{4} \(.*\)$/, '');
 
         const query = `INSERT INTO comments (comment_text, post_id, user_id, created_at) VALUES (?,?,?,?)`;
-        const values = [comment, postId, userId, formattedDate];
+        const values = [commentText, postId, userId, formattedDate];
         const result = await pool.query(query, values);
-
 
         if (result[0].affectedRows < 1) {
             console.error('Failed to create comment');
@@ -33,17 +32,11 @@ exports.createComment = async (userId, postId, comment) => {
         }
 
         const commentId = result[0].insertId;
-
+        const createdComment = await this.getCommentById(commentId);
         return {
             status: 201,
             message: 'Comment created successfully',
-            comment: {
-                id: commentId,
-                comment_text: comment,
-                post_id: postId,
-                user_id: userId,
-                created_at: formattedDate
-            }
+            comment: createdComment
         };
     } catch (error) {
         console.error('Error creating comment:', error);
@@ -53,6 +46,7 @@ exports.createComment = async (userId, postId, comment) => {
         };
     }
 };
+
 
 
 exports.getUserCommentCount = async (userId, postId) => {
@@ -66,6 +60,25 @@ exports.getUserCommentCount = async (userId, postId) => {
         throw error;
     }
 };
+
+exports.getAllComments = async () => {
+    try {
+        const sql = 'SELECT * FROM comments';
+        const [comments] = await pool.query(sql);
+        return {
+            status: 200,
+            message: 'All comments retrieved successfully',
+            comments: comments
+        };
+    } catch (error) {
+        console.error('Error retrieving comments:', error);
+        return {
+            status: 500,
+            message: `Failed to retrieve comments: ${error.message}`
+        };
+    }
+};
+
 
 exports.getAllCommentsOfSinglePost = async (postId) => {
     try {
@@ -88,12 +101,11 @@ exports.getAllCommentsOfSinglePost = async (postId) => {
                 comments: result
             };
         } else {
-            const empty = {
+            return {
                 status: 404,
                 message: 'There are no comments on this post yet!',
                 comments: []
             };
-            return empty;
         }
     } catch (error) {
         console.error('Error retrieving comments:', error);

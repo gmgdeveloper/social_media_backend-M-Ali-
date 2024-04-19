@@ -168,7 +168,7 @@ exports.getPostById = async (postId) => {
 
 exports.getAllPostsByUserId = async (userId) => {
     try {
-        const sql = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.user_id = ?';
+        const sql = 'SELECT posts.*, users.full_name, users.profile_picture FROM posts INNER JOIN users ON posts.user_id = users.id WHERE posts.user_id = ? ORDER BY posts.id DESC';
         const [rows] = await pool.query(sql, [userId]);
 
         const posts = [];
@@ -323,14 +323,16 @@ exports.updateCommentCount = async (postId, commentCount) => {
 
 exports.deletePost = async (postId) => {
     try {
-        const sql = 'DELETE FROM posts WHERE id = ?';
-        const [result] = await pool.query(sql, [postId]);
+        const deleteCommentsQuery = 'DELETE FROM comments WHERE post_id = ?';
+        await pool.query(deleteCommentsQuery, [postId]);
+
+        const deletePostQuery = 'DELETE FROM posts WHERE id = ?';
+        const [result] = await pool.query(deletePostQuery, [postId]);
 
         if (result.affectedRows !== 1) {
             return {
                 status: 404,
-                message: 'Post not found or could not be deleted',
-                error: 'Post not found or could not be deleted'
+                message: 'Post not found or could not be deleted'
             };
         }
 
@@ -342,8 +344,7 @@ exports.deletePost = async (postId) => {
         console.error('Error deleting post:', error);
         return {
             status: 500,
-            message: 'Internal server error',
-            error: error.message
+            message: 'Internal server error'
         };
     }
 };
