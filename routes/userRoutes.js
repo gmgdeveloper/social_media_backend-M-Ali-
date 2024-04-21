@@ -8,7 +8,7 @@ const adminCheck = require("../middlewares/adminCheck")
 
 router.get('/', authenticateToken, handleDefaultRoute)
 
-router.get("/users", authenticateToken, adminCheck, userController.getAllUsers)
+router.get("/users", authenticateToken, userController.getAllUsers)
 
 router.post('/register/step_1', authController.register);
 

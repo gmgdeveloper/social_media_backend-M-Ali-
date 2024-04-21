@@ -153,6 +153,48 @@ exports.getUserProfileById = async (req, res) => {
     }
 };
 
+exports.getSuggestedUsers = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        if (!userId) {
+            return res.status(400).json({
+                status: 400,
+                error: 'User ID is required'
+            });
+        }
+
+        const user = await userModel.getUserByField("id", userId);
+        if (!user) {
+            return res.status(404).json({
+                status: 404,
+                error: 'User not found'
+            });
+        }
+
+        const suggestedUsers = await userModel.getSuggestedUsers(userId);
+
+        if (!suggestedUsers || suggestedUsers.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                error: 'No suggested users found'
+            });
+        }
+
+        res.status(200).json({
+            status: 200,
+            message: 'Suggested users fetched successfully',
+            suggestedUsers: suggestedUsers
+        });
+    } catch (error) {
+        console.error('Error fetching suggested users:', error);
+        res.status(500).json({
+            status: 500,
+            error: 'Internal server error'
+        });
+    }
+};
+
 exports.stepTwo = async (req, res) => {
     const { bio } = req.body;
 
@@ -268,4 +310,3 @@ exports.stepThree = async (req, res) => {
         }
     });
 };
-
