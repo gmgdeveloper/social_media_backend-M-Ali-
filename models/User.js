@@ -1,5 +1,5 @@
 const pool = require('../config/db');
-const followModel = require('../models/followModel');
+const followModel = require('./Follow');
 
 exports.getUserByField = async (fieldName, fieldValue) => {
     try {
@@ -104,34 +104,16 @@ exports.updateUserFields = async (id, fieldsToUpdate, successMsg) => {
     }
 };
 
-exports.getSuggestedUsers = async (userId) => {
-    try {
-        // Get the list of followers and following for the given user
-        const followers = await followModel.getFollowers(userId);
-        const following = await followModel.getFollowing(userId);
-
-        // Extract user IDs from followers and following lists
-        const followerIds = followers.followers.map(follower => follower.id);
-        const followingIds = following.following.map(following => following.id);
-
-        // Find mutual followers by comparing the two lists
-        const mutualFollowersIds = followerIds.filter(followerId => followingIds.includes(followerId));
-
-        // Exclude the current user from the list of suggested users
-        const suggestedUserIds = mutualFollowersIds.filter(id => id !== userId);
-
-        // Get user details for suggested users
-        const suggestedUsers = await userModel.getUsersByIds(suggestedUserIds);
-
-        return { status: 200, suggestedUsers: suggestedUsers };
-    } catch (error) {
-        console.error('Error fetching suggested users:', error);
-        return { status: 500, error: 'Internal server error' };
-    }
-};
-
 exports.getUsersByIds = async (userIds) => {
     try {
+        // Check if userIds is an array and not empty
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            err_obj = {
+                status: 400,
+                message: 'Invalid user IDs'
+            }
+        }
+
         // Convert the array of user IDs into a comma-separated string
         const userIdsString = userIds.join(',');
 
@@ -150,5 +132,24 @@ exports.getUsersByIds = async (userIds) => {
     } catch (error) {
         console.error('Error fetching users by IDs:', error);
         throw new Error('Failed to fetch users by IDs');
+    }
+};
+
+exports.getLast10RecentUsers = async () => {
+    try {
+        // Fetch the last 10 recent users from the database
+        const sql = `
+            SELECT id, full_name, profile_picture
+            FROM users
+            ORDER BY id DESC
+            LIMIT 10
+        `;
+        const [rows] = await pool.query(sql);
+
+        // Return the fetched recent users
+        return rows;
+    } catch (error) {
+        console.error('Error fetching last 10 recent users:', error);
+        throw new Error('Failed to fetch last 10 recent users');
     }
 };

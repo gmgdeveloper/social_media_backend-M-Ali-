@@ -38,38 +38,46 @@ exports.unfollowUser = async (followerId, followingId) => {
     }
 };
 
-
 exports.getFollowers = async (userId) => {
     try {
+        if (!userId) {
+            return { status: 400, error: 'User ID is missing' };
+        }
+
         const sql = `
             SELECT users.id, users.full_name, users.profile_picture, followers.follow_date
             FROM users
             INNER JOIN followers ON users.id = followers.follower_id
-            WHERE followers.following_id = ?`;
+            WHERE followers.following_id = ? ORDER BY followers.follow_id DESC`;
         const [rows] = await pool.query(sql, [userId]);
         return { status: 200, followers: rows };
     } catch (error) {
         console.error('Error retrieving followers:', error);
-        return { status: 500, error: error.message };
+        return { status: 500, error: 'Internal server error' };
     }
 };
 
-
-
 exports.getFollowing = async (userId) => {
     try {
+        if (!userId) {
+            return { status: 400, error: 'User ID is missing' };
+        }
+
         const sql = `
             SELECT users.id, users.full_name, users.profile_picture, followers.follow_date
             FROM users
             INNER JOIN followers ON users.id = followers.following_id
-            WHERE followers.follower_id = ?`;
+            WHERE followers.follower_id = ? 
+            order by followers.follow_id desc
+            `;
         const [rows] = await pool.query(sql, [userId]);
         return { status: 200, following: rows };
     } catch (error) {
         console.error('Error retrieving following:', error);
-        return { status: 500, error: error.message };
+        return { status: 500, error: 'Internal server error' };
     }
 };
+
 
 exports.getFollowStatus = async (followerId, followingId) => {
     try {

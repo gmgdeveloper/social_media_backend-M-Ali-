@@ -30,4 +30,6 @@ router.get('/profile', authenticateToken, userController.getLoggedInUser);
 
 router.get('/profile/:userId', authenticateToken, userController.getUserProfileById);
 
+router.get('/suggestedUsers', authenticateToken, userController.getSuggestedUsers);
+
 module.exports = router;

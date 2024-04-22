@@ -155,45 +155,76 @@ exports.getUserProfileById = async (req, res) => {
 
 exports.getSuggestedUsers = async (req, res) => {
     try {
+        // Check if user ID is provided in the request
+        if (!req.user || !req.user.id) {
+            return res.status(400).json({ status: 400, error: 'User ID is missing in the request' });
+        }
+
         const userId = req.user.id;
 
-        if (!userId) {
-            return res.status(400).json({
-                status: 400,
-                error: 'User ID is required'
+        // Get the list of followers and following for the given user
+        const followersResponse = await followModel.getFollowers(userId);
+        const followingResponse = await followModel.getFollowing(userId);
+
+        // Check if both responses are successful and contain data
+        if (followersResponse.status !== 200 || followingResponse.status !== 200) {
+            return res.status(500).json({ status: 500, error: 'Failed to fetch followers or following data' });
+        }
+
+        const followers = followersResponse.followers;
+        const following = followingResponse.following;
+
+        // Extract user IDs from followers and following lists
+        const followerIds = followers.map(follower => follower.id);
+        const followingIds = following.map(following => following.id);
+
+        // Find mutual followers by comparing the two lists
+        const mutualFollowersIds = followerIds.filter(followerId => followingIds.includes(followerId));
+
+        // Filter out users who are already following or being followed by the specified user
+        const suggestedUserIds = mutualFollowersIds.filter(id => {
+            return !followingIds.includes(id) && !followerIds.includes(id) && id !== userId;
+        });
+
+        // Check if there are suggested user IDs
+        if (suggestedUserIds.length === 0) {
+            // If no suggested users found, get the last 10 recent users
+            const recentUsers = await userModel.getLast10RecentUsers();
+            return res.status(200).json({
+                status: 200,
+                message: 'No suggested users found. Here are the last 10 recent users.',
+                recentUsers: recentUsers
             });
         }
 
-        const user = await userModel.getUserByField("id", userId);
-        if (!user) {
-            return res.status(404).json({
-                status: 404,
-                error: 'User not found'
-            });
-        }
+        // Get the count of mutual friends for each suggested user
+        const mutualFriendsCounts = {};
+        mutualFollowersIds.forEach(id => {
+            if (!mutualFriendsCounts[id]) {
+                mutualFriendsCounts[id] = 1;
+            } else {
+                mutualFriendsCounts[id]++;
+            }
+        });
 
-        const suggestedUsers = await userModel.getSuggestedUsers(userId);
+        // Retrieve suggested users with their mutual friends count
+        const suggestedUsers = await userModel.getUsersByIds(suggestedUserIds);
+        const suggestedUsersWithMutualFriends = suggestedUsers.map(user => ({
+            ...user,
+            mutualFriendsCount: mutualFriendsCounts[user.id] || 0
+        }));
 
-        if (!suggestedUsers || suggestedUsers.length === 0) {
-            return res.status(404).json({
-                status: 404,
-                error: 'No suggested users found'
-            });
-        }
-
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
-            message: 'Suggested users fetched successfully',
-            suggestedUsers: suggestedUsers
+            message: "Users fetched successfully",
+            suggestedUsers: suggestedUsersWithMutualFriends
         });
     } catch (error) {
         console.error('Error fetching suggested users:', error);
-        res.status(500).json({
-            status: 500,
-            error: 'Internal server error'
-        });
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
     }
 };
+
 
 exports.stepTwo = async (req, res) => {
     const { bio } = req.body;
