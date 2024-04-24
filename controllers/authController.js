@@ -353,10 +353,11 @@ exports.resetPassword = async (req, res) => {
                 });
             } catch (error) {
                 console.error('Error sending password reset email:', error);
-                await userModel.updateUserFields(user.id, { reset_token: null }, 'Reset token cleared');
+                const err = await userModel.updateUserFields(user.id, { reset_token: null }, 'Reset token cleared');
                 return res.status(500).json({
                     status: 500,
-                    error: 'Error sending password reset email'
+                    error: 'Error sending password reset email',
+                    err: err
                 });
             }
         }

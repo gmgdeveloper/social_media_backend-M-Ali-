@@ -153,3 +153,23 @@ exports.getLast10RecentUsers = async () => {
         throw new Error('Failed to fetch last 10 recent users');
     }
 };
+
+exports.getUserData = async (userId) => {
+    try {
+        const sql = `
+            SELECT id, full_name, profile_picture
+            FROM users
+            WHERE id = ?
+        `;
+        const [rows] = await pool.query(sql, [userId]);
+
+        if (!rows || rows.length === 0) {
+            return { status: 404, error: 'User not found' };
+        }
+
+        return { status: 200, user: rows[0] };
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        return { status: 500, error: 'Failed to fetch user data' };
+    }
+};

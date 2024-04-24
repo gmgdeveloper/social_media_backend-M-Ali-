@@ -112,3 +112,36 @@ exports.getFollowing = async (req, res) => {
         });
     }
 };
+
+exports.getFriends = async (req, res) => {
+    try {
+        let userId;
+        // Check if userId is provided in the request params
+        if (req.params.userId !== undefined) {
+            userId = req.params.userId;
+        } else {
+            // If userId is not provided, use the logged-in user's id
+            userId = req.user.id;
+        }
+
+        // Check if userId is valid
+        if (!userId) {
+            return res.status(400).json({ status: 400, error: 'Invalid user ID' });
+        }
+
+        // Fetch friends for the specified userId
+        const friends = await FollowModel.getAllFriends(userId);
+
+        // Check if the response status is 200
+        if (friends.status === 200) {
+            return res.status(200).json(friends.friends);
+        } else {
+            // Handle other status codes (e.g., 404, 500) returned by the model
+            return res.status(friends.status).json({ status: friends.status, error: friends.error });
+        }
+    } catch (error) {
+        // Handle unexpected errors
+        console.error('Error fetching friends:', error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};

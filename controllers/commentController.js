@@ -186,8 +186,7 @@ exports.editComment = async (req, res) => {
                 status: 403,
                 message: 'You are not authorized to edit this comment'
             });
-        }
-
+        }               
         const result = await commentModel.updateComment(commentId, updatedComment);
 
         if (result.status === 200) {

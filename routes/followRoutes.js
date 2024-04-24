@@ -11,4 +11,8 @@ router.get('/followers/:userId', authenticateToken, followController.getFollower
 
 router.get('/following/:userId', authenticateToken, followController.getFollowing);
 
+router.get("/getAllFriends/", authenticateToken, followController.getFriends)
+
+router.get("/getAllFriends/:userId", authenticateToken, followController.getFriends)
+
 module.exports = router;

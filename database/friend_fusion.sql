@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 19, 2024 at 11:43 AM
+-- Generation Time: Apr 23, 2024 at 10:02 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,36 @@ SET time_zone = "+00:00";
 --
 -- Database: `friend_fusion`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat`
+--
+
+CREATE TABLE `chat` (
+  `id` int(11) NOT NULL,
+  `room_id` int(11) NOT NULL,
+  `from_id` int(11) NOT NULL,
+  `to_id` int(11) NOT NULL,
+  `message` text DEFAULT NULL,
+  `type` varchar(255) DEFAULT NULL,
+  `timestamp` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_rooms`
+--
+
+CREATE TABLE `chat_rooms` (
+  `room_id` int(11) NOT NULL,
+  `room_name` varchar(255) NOT NULL,
+  `user1_id` int(11) NOT NULL,
+  `user2_id` int(11) NOT NULL,
+  `created_at` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -44,7 +74,7 @@ INSERT INTO `comments` (`id`, `post_id`, `user_id`, `comment_text`, `created_at`
 (15, 44, 42, 'Want to watch it together???', 'Wed, Apr 17, 2024, 2:13:21 PM'),
 (16, 44, 42, 'How long have you been watching Anime?', 'Wed, Apr 17, 2024, 2:16:05 PM'),
 (17, 44, 41, 'How long have you been watching Anime?', 'Wed, Apr 17, 2024, 5:53:32 PM'),
-(18, 45, 41, 'Which Car is your Fav?', 'Thu, Apr 18, 2024, 1:04:03 PM');
+(20, 44, 44, 'With you my guy', 'Fri, Apr 19, 2024, 5:49:35 PM');
 
 -- --------------------------------------------------------
 
@@ -64,8 +94,12 @@ CREATE TABLE `followers` (
 --
 
 INSERT INTO `followers` (`follow_id`, `follower_id`, `following_id`, `follow_date`) VALUES
-(14, 44, 41, 'Fri, Apr 19, 2024, 2:40:27 PM'),
-(15, 44, 42, 'Fri, Apr 19, 2024, 2:40:44 PM');
+(15, 44, 42, 'Fri, Apr 19, 2024, 2:40:44 PM'),
+(16, 41, 43, 'Sat, Apr 20, 2024, 6:15:45 PM'),
+(17, 42, 41, 'Mon, Apr 22, 2024, 2:01:06 PM'),
+(18, 42, 43, 'Mon, Apr 22, 2024, 2:01:17 PM'),
+(19, 42, 44, 'Mon, Apr 22, 2024, 2:01:22 PM'),
+(20, 41, 42, 'Mon, Apr 22, 2024, 2:58:39 PM');
 
 -- --------------------------------------------------------
 
@@ -114,6 +148,20 @@ INSERT INTO `likes` (`id`, `post_id`, `user_id`, `comment_id`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `media`
+--
+
+CREATE TABLE `media` (
+  `id` int(11) NOT NULL,
+  `chat_id` int(11) NOT NULL,
+  `type` varchar(255) NOT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `timestamp` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `posts`
 --
 
@@ -134,8 +182,7 @@ CREATE TABLE `posts` (
 INSERT INTO `posts` (`id`, `user_id`, `caption`, `media`, `post_date`, `like_count`, `comment_count`) VALUES
 (42, 41, 'Will AI really take our jobs...?', 'http://localhost:8000/uploads/posts/images/media-1713274534001-1 (203).jpg', 'Tue, Apr 16, 2024, 6:35:34 PM', 0, 0),
 (43, 41, 'I love Anime', 'http://localhost:8000/uploads/posts/videos/media-1713274625620-zhenyaaa_6981054971030686981.mp4', 'Tue, Apr 16, 2024, 6:37:05 PM', 1, 0),
-(44, 41, 'I love Anime', 'http://localhost:8000/uploads/posts/images/media-1713274855593-110948.jpg,http://localhost:8000/uploads/posts/videos/media-1713274855620-big_bro_ITACHI.mp4', 'Tue, Apr 16, 2024, 6:40:55 PM', 1, 4),
-(45, 41, 'I love cars', 'http://localhost:8000/uploads/posts/images/media-1713353345605-1_(203).jpg', 'Wed, Apr 17, 2024, 4:29:06 PM', 1, 1);
+(44, 41, 'I love Anime', 'http://localhost:8000/uploads/posts/images/media-1713274855593-110948.jpg,http://localhost:8000/uploads/posts/videos/media-1713274855620-big_bro_ITACHI.mp4', 'Tue, Apr 16, 2024, 6:40:55 PM', 1, 5);
 
 -- --------------------------------------------------------
 
@@ -174,11 +221,29 @@ INSERT INTO `users` (`id`, `first_name`, `last_name`, `full_name`, `email`, `pas
 (41, 'Ali', 'Pirzada', 'Ali Pirzada', 'ali@gmail.com', '$2a$10$FKppVBMFA6.Qwf2V1k00LOLoG.h4GFk6AmpL5SzDtN/YBcqJGTYxa', 'http://localhost:8000/uploads/profiles/profile-1713273367860-1 (132).jpg', 'http://localhost:8000/uploads/covers/cover-1713273368564-1 (248).jpg', 'Hey there, this is Ali Updating Bio.', NULL, NULL, NULL, NULL, '0', '0', 'user', 0, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQxLCJpYXQiOjE3MTMzNjczMDgsImV4cCI6MTcxMzM3MDkwOH0.4oUJVdNgn10TFo9e43X6dvrZqbQ4I068NKSuwfgx6jE', 'Tue, Apr 16, 2024, 6:14:07 PM'),
 (42, 'Muhammad Ali', 'Pirzada', 'Muhammad Ali Pirzada', 'mali@gmail.com', '$2a$10$QGjw/TCdVdSZR0LaG.gpYOWoFq0gpcOYWEbiyIjj43gf3krBup6XC', 'http://localhost:8000/uploads/profiles/profile--1713341962854-1_(125)(copy_compressed).jpg', 'http://localhost:8000/uploads/covers/cover--1713341962902-59.jpg', 'Hey there, this is Muhammad Ali a backend dev Updating Bio.', NULL, NULL, NULL, NULL, '0', '0', 'user', 0, 1, NULL, 'Wed, Apr 17, 2024, 1:16:29 PM'),
 (43, 'Muhammad Ali', 'Pirzada', 'Muhammad Ali Pirzada', 'muhalipirzada@gmail.com', '$2a$10$teS9aU6hK1QCxSIh8QPztePxeROZN7fYPvYl24YUlI5CGbPtSjUE.', 'http://localhost:8000/uploads/profiles/profile--1713363951851-1_(125)(copy_compressed).jpg', 'http://localhost:8000/uploads/covers/cover--1713363951966-59.jpg', 'this is muhammad ali updating bio ', NULL, NULL, NULL, NULL, '0', '0', 'user', 0, 1, NULL, 'Wed, Apr 17, 2024, 7:25:11 PM'),
-(44, 'Muhammad Ali', 'Pirzada', 'Muhammad Ali Pirzada', 'fireflyali19@gmail.com', '$2a$10$bMOj1YVq.4bgHvI6BktQ6O0Q2YuC2WSR1rYERXcV97PJ39F9eVz/K', 'http://localhost:8000/uploads/profiles/profile--1713367471671-1cb9d7d82c6149334f18adaf3f0c16a4.jpg', 'http://localhost:8000/uploads/covers/cover--1713367471681-1194220.jpg', 'Hey there, this is Muhammad Ali Pirzada a backend dev with knowledge of AI Updating Bio.', NULL, NULL, NULL, NULL, '0', '0', 'user', 0, 1, NULL, 'Wed, Apr 17, 2024, 8:22:40 PM');
+(44, 'Muhammad Ali', 'Pirzada', 'Muhammad Ali Pirzada', 'fireflyali19@gmail.com', '$2a$10$bMOj1YVq.4bgHvI6BktQ6O0Q2YuC2WSR1rYERXcV97PJ39F9eVz/K', 'http://localhost:8000/uploads/profiles/profile--1713367471671-1cb9d7d82c6149334f18adaf3f0c16a4.jpg', 'http://localhost:8000/uploads/covers/cover--1713367471681-1194220.jpg', 'Hey there, this is Muhammad Ali Pirzada a backend dev with knowledge of AI Updating Bio.', NULL, NULL, NULL, NULL, '0', '0', 'user', 0, 1, NULL, 'Wed, Apr 17, 2024, 8:22:40 PM'),
+(45, 'Siraj', 'Umrani', 'Siraj Umrani', 'sirajumrani110@gmail.com', '$2a$10$5N.RkD6/r98/2Z4t1/zOpu.EG27AQMFO3hpn8fp5WWWnEax6yk5/e', 'http://localhost:8000/uploads/profiles/profile--1713858549081-1_(244).jpg', 'http://localhost:8000/uploads/covers/cover--1713858549152-1_(246).jpg', 'Hey there, this is Siraj Umrani a frontend dev with knowledge of AI Updating Bio.', NULL, NULL, NULL, NULL, '0', '0', 'user', 0, 1, NULL, 'Tue, Apr 23, 2024, 12:47:13 PM');
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `chat`
+--
+ALTER TABLE `chat`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `room_id` (`room_id`),
+  ADD KEY `from_id` (`from_id`),
+  ADD KEY `to_id` (`to_id`);
+
+--
+-- Indexes for table `chat_rooms`
+--
+ALTER TABLE `chat_rooms`
+  ADD PRIMARY KEY (`room_id`),
+  ADD KEY `user1_id` (`user1_id`),
+  ADD KEY `user2_id` (`user2_id`);
 
 --
 -- Indexes for table `comments`
@@ -210,6 +275,13 @@ ALTER TABLE `likes`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `media`
+--
+ALTER TABLE `media`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `chat_id` (`chat_id`);
+
+--
 -- Indexes for table `posts`
 --
 ALTER TABLE `posts`
@@ -227,16 +299,28 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT for table `chat`
+--
+ALTER TABLE `chat`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `chat_rooms`
+--
+ALTER TABLE `chat_rooms`
+  MODIFY `room_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `comments`
 --
 ALTER TABLE `comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `followers`
 --
 ALTER TABLE `followers`
-  MODIFY `follow_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `follow_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `gallery`
@@ -251,6 +335,12 @@ ALTER TABLE `likes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
 
 --
+-- AUTO_INCREMENT for table `media`
+--
+ALTER TABLE `media`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `posts`
 --
 ALTER TABLE `posts`
@@ -260,11 +350,26 @@ ALTER TABLE `posts`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `chat`
+--
+ALTER TABLE `chat`
+  ADD CONSTRAINT `chat_ibfk_1` FOREIGN KEY (`room_id`) REFERENCES `chat_rooms` (`room_id`),
+  ADD CONSTRAINT `chat_ibfk_2` FOREIGN KEY (`from_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `chat_ibfk_3` FOREIGN KEY (`to_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `chat_rooms`
+--
+ALTER TABLE `chat_rooms`
+  ADD CONSTRAINT `chat_rooms_ibfk_1` FOREIGN KEY (`user1_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `chat_rooms_ibfk_2` FOREIGN KEY (`user2_id`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `comments`
@@ -285,6 +390,12 @@ ALTER TABLE `followers`
 --
 ALTER TABLE `gallery`
   ADD CONSTRAINT `gallery_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `media`
+--
+ALTER TABLE `media`
+  ADD CONSTRAINT `media_ibfk_1` FOREIGN KEY (`chat_id`) REFERENCES `chat` (`id`);
 
 --
 -- Constraints for table `posts`

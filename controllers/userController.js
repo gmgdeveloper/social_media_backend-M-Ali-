@@ -155,69 +155,72 @@ exports.getUserProfileById = async (req, res) => {
 
 exports.getSuggestedUsers = async (req, res) => {
     try {
-        // Check if user ID is provided in the request
         if (!req.user || !req.user.id) {
             return res.status(400).json({ status: 400, error: 'User ID is missing in the request' });
         }
 
         const userId = req.user.id;
 
-        // Get the list of followers and following for the given user
-        const followersResponse = await followModel.getFollowers(userId);
+        // Fetch the users that the logged-in user follows
         const followingResponse = await followModel.getFollowing(userId);
 
-        // Check if both responses are successful and contain data
-        if (followersResponse.status !== 200 || followingResponse.status !== 200) {
-            return res.status(500).json({ status: 500, error: 'Failed to fetch followers or following data' });
+        // Check for errors in the response
+        if (followingResponse.status !== 200) {
+            return res.status(500).json({ status: 500, error: 'Failed to fetch following data' });
         }
 
-        const followers = followersResponse.followers;
-        const following = followingResponse.following;
+        // Extract the IDs of the users that the logged-in user follows
+        const followingIds = followingResponse.following.map(user => user.id);
 
-        // Extract user IDs from followers and following lists
-        const followerIds = followers.map(follower => follower.id);
-        const followingIds = following.map(following => following.id);
+        // Initialize an empty array to store all friends
+        let allFriends = [];
 
-        // Find mutual followers by comparing the two lists
-        const mutualFollowersIds = followerIds.filter(followerId => followingIds.includes(followerId));
+        // Iterate over each user ID that the logged-in user follows
+        for (const followingId of followingIds) {
+            // Fetch friends (mutual connections) for each user ID
+            const friendsResponse = await followModel.getAllFriends(followingId);
 
-        // Filter out users who are already following or being followed by the specified user
-        const suggestedUserIds = mutualFollowersIds.filter(id => {
-            return !followingIds.includes(id) && !followerIds.includes(id) && id !== userId;
-        });
-
-        // Check if there are suggested user IDs
-        if (suggestedUserIds.length === 0) {
-            // If no suggested users found, get the last 10 recent users
-            const recentUsers = await userModel.getLast10RecentUsers();
-            return res.status(200).json({
-                status: 200,
-                message: 'No suggested users found. Here are the last 10 recent users.',
-                recentUsers: recentUsers
-            });
-        }
-
-        // Get the count of mutual friends for each suggested user
-        const mutualFriendsCounts = {};
-        mutualFollowersIds.forEach(id => {
-            if (!mutualFriendsCounts[id]) {
-                mutualFriendsCounts[id] = 1;
-            } else {
-                mutualFriendsCounts[id]++;
+            // Check for errors in the response
+            if (friendsResponse.status !== 200) {
+                // Skip the current user and continue with the next one
+                continue;
             }
-        });
 
-        // Retrieve suggested users with their mutual friends count
-        const suggestedUsers = await userModel.getUsersByIds(suggestedUserIds);
-        const suggestedUsersWithMutualFriends = suggestedUsers.map(user => ({
-            ...user,
-            mutualFriendsCount: mutualFriendsCounts[user.id] || 0
-        }));
+            // Concatenate the fetched friends to the array of all friends
+            allFriends = allFriends.concat(friendsResponse.friends);
+        }
 
+        // Remove duplicates from the array of all friends
+        allFriends = allFriends.filter((friend, index, self) =>
+            index === self.findIndex((f) => f.id === friend.id)
+        );
+
+        // Filter out the logged-in user from the list of suggested users
+        const suggestedUsers = allFriends.filter(friend => friend.id !== userId);
+
+        // Array to store suggested users with mutual friends
+        const suggestedUsersWithMutual = [];
+
+        // Fetch mutual friends for each suggested user
+        for (const suggestedUser of suggestedUsers) {
+            const friendsResponse = await followModel.getAllFriends(suggestedUser.id);
+            if (friendsResponse.status === 200) {
+                const mutualFriends = friendsResponse.friends.filter(friend => followingIds.includes(friend.id));
+                suggestedUser.mutualFriends = mutualFriends;
+                suggestedUser.mutualFriendsCount = mutualFriends.length;
+                suggestedUsersWithMutual.push(suggestedUser);
+            }
+        }
+
+        // Fetch data for the logged-in user
+        const loggedInUserData = await userModel.getUserData(userId);
+
+        // Return success response with suggested users and logged-in user data
         return res.status(200).json({
             status: 200,
-            message: "Users fetched successfully",
-            suggestedUsers: suggestedUsersWithMutualFriends
+            message: 'Suggested users fetched successfully',
+            loggedInUser: loggedInUserData.user,
+            suggestedUsers: suggestedUsersWithMutual
         });
     } catch (error) {
         console.error('Error fetching suggested users:', error);

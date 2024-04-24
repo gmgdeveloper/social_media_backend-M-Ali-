@@ -89,3 +89,31 @@ exports.getFollowStatus = async (followerId, followingId) => {
         throw new Error('Failed to check follow status');
     }
 };
+
+// Function to fetch all friends (mutual connections) of a user
+exports.getAllFriends = async (userId) => {
+    try {
+        if (!userId) {
+            return { status: 400, error: 'User ID is missing' };
+        }
+
+        const sql = `
+            SELECT users.id, users.full_name, users.profile_picture
+            FROM users
+            INNER JOIN followers AS f1 ON users.id = f1.following_id
+            INNER JOIN followers AS f2 ON users.id = f2.follower_id
+            WHERE f1.follower_id = ? AND f2.following_id = ?
+        `;
+
+        const [rows] = await pool.query(sql, [userId, userId]);
+
+        if (!rows || rows.length === 0) {
+            return { status: 404, error: 'No friends found for the user', friends: [] };
+        }
+
+        return { status: 200, friends: rows };
+    } catch (error) {
+        console.error('Error fetching friends:', error);
+        return { status: 500, error: 'Internal server error' };
+    }
+};

@@ -2,13 +2,13 @@
 const pool = require('../config/db');
 
 exports.createChatRoom = async (roomName, user1Id, user2Id) => {
-    
+
     if (!roomName || !user1Id || !user2Id || user1Id === user2Id) {
         return { status: 400, error: 'Invalid input parameters' };
     }
 
     try {
-       
+
         const date = new Date();
         const formattedDate = date.toLocaleString('en-US', {
             weekday: 'short',
@@ -25,9 +25,9 @@ exports.createChatRoom = async (roomName, user1Id, user2Id) => {
         const values = [roomName, user1Id, user2Id, formattedDate];
         const [result] = await pool.query(sql, values);
 
-        
+
         if (result.affectedRows === 1) {
-            const newRoom = await this.getChatRoomById(result[0].insertId);
+            const newRoom = await this.getChatRoomById(result.insertId);
             return { status: 201, message: 'Chat room created successfully', room: newRoom.room };
         } else {
             return { status: 500, error: 'Failed to create chat room' };
@@ -38,6 +38,67 @@ exports.createChatRoom = async (roomName, user1Id, user2Id) => {
     }
 };
 
+exports.getAllChatRooms = async () => {
+    try {
+        const sql = 'SELECT * FROM chat_rooms';
+        const [rows] = await pool.query(sql);
+
+        if (rows.length > 0) {
+            return { status: 200, message: 'Chat rooms found', chatRooms: rows };
+        } else {
+            return { status: 404, message: 'No chat rooms found' };
+        }
+    } catch (error) {
+        console.error('Error fetching chat rooms:', error);
+        return { status: 500, error: error.message || 'Internal server error' };
+    }
+};
+
+exports.updateChatRoom = async (roomName, roomId) => {
+    if (!roomId || !roomName) {
+        return { status: 400, error: 'Invalid input parameters' };
+    }
+
+    try {
+        const sql = 'UPDATE chat_rooms SET room_name = ? WHERE room_id = ?';
+        const values = [roomName, roomId];
+        const [result] = await pool.query(sql, [roomName, roomId]);
+
+
+
+        if (result.affectedRows === 1) {
+            const updatedRoom = await this.getChatRoomById(roomId);
+            return { status: 200, message: 'Chat room updated successfully', room: updatedRoom.room };
+        } else {
+            return { status: 404, message: 'Something went wrong with database.' };
+        }
+
+    } catch (error) {
+        console.error('Error updating chat room:', error);
+        return { status: 500, error: error.message || 'Internal server error' };
+    }
+}
+
+exports.deleteChatRoom = async (roomId) => {
+    if (!roomId) {
+        return { status: 400, error: 'Invalid input parameters' };
+    }
+
+    try {
+        const sql = 'DELETE FROM chat_rooms WHERE room_id = ?';
+        const [result] = await pool.query(sql, [roomId]);
+
+        if (result.affectedRows === 1) {
+            return { status: 200, message: 'Chat room deleted successfully' };
+        } else {
+            return { status: 404, message: 'Something went wrong with database.' };
+        }
+    }
+    catch (error) {
+        console.error('Error deleting chat room:', error);
+        return { status: 500, error: error.message || 'Internal server error' };
+    }
+}
 
 exports.getChatRoomById = async (roomId) => {
     try {
