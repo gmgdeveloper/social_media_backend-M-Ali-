@@ -135,24 +135,32 @@ exports.getUsersByIds = async (userIds) => {
     }
 };
 
-exports.getLast10RecentUsers = async () => {
+exports.getRecentUsers = async (limit) => {
     try {
-        // Fetch the last 10 recent users from the database
+        // Set the default limit to 10 if limit is negative or not provided
+        const userLimit = limit < 0 ? 10 : limit;
+
+        // Fetch the last 'limit' recent users from the database
         const sql = `
             SELECT id, full_name, profile_picture
             FROM users
             ORDER BY id DESC
-            LIMIT 10
+            LIMIT ?;
         `;
-        const [rows] = await pool.query(sql);
+        const [rows] = await pool.query(sql, [userLimit]);
 
         // Return the fetched recent users
         return rows;
     } catch (error) {
-        console.error('Error fetching last 10 recent users:', error);
-        throw new Error('Failed to fetch last 10 recent users');
+        console.error('Error fetching recent users:', error);
+        err = {
+            status: 500,
+            message: 'Failed to fetch recent users'
+        };
+        return err;
     }
 };
+
 
 exports.getUserData = async (userId) => {
     try {

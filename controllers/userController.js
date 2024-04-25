@@ -58,53 +58,19 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-exports.getLoggedInUser = async (req, res) => {
-    try {
-        const id = req.user.id;
-
-        const user = await userModel.getUserByField("id", id);
-
-        const posts = await postModel.getAllPostsByUserId(id);
-
-        const followersResponse = await followModel.getFollowers(id);
-        const followers = followersResponse.status === 200 ? followersResponse.followers : [];
-
-        const followingResponse = await followModel.getFollowing(id);
-        const following = followingResponse.status === 200 ? followingResponse.following : [];
-
-        res.status(200).json({
-            status: 200,
-            message: 'User fetched successfully',
-            user: {
-                id: user.id,
-                name: user.full_name,
-                email: user.email,
-                bio: user.bio,
-                profile_pic: user.profile_picture,
-                cover: user.cover_picture,
-                role: user.role,
-                is_admin: user.is_admin,
-                is_active: user.is_active,
-                registration_date: user.registration_date,
-                followers_count: followers.length,
-                following_count: following.length
-            },
-            followers: followers,
-            following: following,
-            posts: posts
-        });
-    } catch (error) {
-        console.error('Error fetching user:', error);
-        res.status(500).json({
-            status: 500,
-            error: 'Internal server error'
-        });
-    }
-}
-
 exports.getUserProfileById = async (req, res) => {
     try {
-        const userId = req.params.userId;
+        let userId;
+        if (req.params.userId && req.params.userId.trim() !== '' || req.params.userId !== undefined) {
+            userId = req.params.userId;
+        } else if (req.user && req.user.id) {
+            userId = req.user.id;
+        } else {
+            return res.status(400).json({
+                status: 400,
+                error: 'Invalid user ID'
+            });
+        }
 
         const user = await userModel.getUserByField('id', userId);
 
@@ -123,7 +89,7 @@ exports.getUserProfileById = async (req, res) => {
 
         const posts = await postModel.getAllPostsByUserId(userId);
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'User profile fetched successfully',
             user: {
@@ -146,7 +112,7 @@ exports.getUserProfileById = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching user profile:', error);
-        res.status(500).json({
+        return res.status(500).json({
             status: 500,
             error: 'Internal server error'
         });
@@ -161,47 +127,41 @@ exports.getSuggestedUsers = async (req, res) => {
 
         const userId = req.user.id;
 
-        // Fetch the users that the logged-in user follows
+        const { limit } = req.body
+        const userLimit = limit || 10;
+
         const followingResponse = await followModel.getFollowing(userId);
 
-        // Check for errors in the response
         if (followingResponse.status !== 200) {
-            return res.status(500).json({ status: 500, error: 'Failed to fetch following data' });
+            const recentUsers = await userModel.getRecentUsers(userLimit);
+            const filteredRecentUsers = recentUsers.filter(user => user.id !== userId);
+            return res.status(200).json({
+                status: 200,
+                message: 'Recent users fetched successfully',
+                recentUsers: filteredRecentUsers
+            });
         }
 
-        // Extract the IDs of the users that the logged-in user follows
         const followingIds = followingResponse.following.map(user => user.id);
 
-        // Initialize an empty array to store all friends
         let allFriends = [];
 
-        // Iterate over each user ID that the logged-in user follows
         for (const followingId of followingIds) {
-            // Fetch friends (mutual connections) for each user ID
             const friendsResponse = await followModel.getAllFriends(followingId);
-
-            // Check for errors in the response
             if (friendsResponse.status !== 200) {
-                // Skip the current user and continue with the next one
                 continue;
             }
-
-            // Concatenate the fetched friends to the array of all friends
             allFriends = allFriends.concat(friendsResponse.friends);
         }
 
-        // Remove duplicates from the array of all friends
         allFriends = allFriends.filter((friend, index, self) =>
             index === self.findIndex((f) => f.id === friend.id)
         );
 
-        // Filter out the logged-in user from the list of suggested users
         const suggestedUsers = allFriends.filter(friend => friend.id !== userId);
 
-        // Array to store suggested users with mutual friends
         const suggestedUsersWithMutual = [];
 
-        // Fetch mutual friends for each suggested user
         for (const suggestedUser of suggestedUsers) {
             const friendsResponse = await followModel.getAllFriends(suggestedUser.id);
             if (friendsResponse.status === 200) {
@@ -212,22 +172,29 @@ exports.getSuggestedUsers = async (req, res) => {
             }
         }
 
-        // Fetch data for the logged-in user
         const loggedInUserData = await userModel.getUserData(userId);
 
-        // Return success response with suggested users and logged-in user data
-        return res.status(200).json({
-            status: 200,
-            message: 'Suggested users fetched successfully',
-            loggedInUser: loggedInUserData.user,
-            suggestedUsers: suggestedUsersWithMutual
-        });
+        if (loggedInUserData.status == 200 && suggestedUsersWithMutual.length !== 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'Suggested users fetched successfully',
+                loggedInUser: loggedInUserData.user,
+                suggestedUsers: suggestedUsersWithMutual
+            });
+        } else {
+            const recentUsers = await userModel.getRecentUsers(userLimit);
+            const filteredRecentUsers = recentUsers.filter(user => user.id !== userId && !followingIds.includes(user.id));
+            return res.status(200).json({
+                status: 200,
+                message: 'Recent users fetched successfully',
+                recentUsers: filteredRecentUsers
+            });
+        }
     } catch (error) {
         console.error('Error fetching suggested users:', error);
         return res.status(500).json({ status: 500, error: 'Internal server error' });
     }
 };
-
 
 exports.stepTwo = async (req, res) => {
     const { bio } = req.body;

@@ -26,7 +26,7 @@ router.post('/change-password', authenticateToken, authController.changePassword
 
 router.post("/logout", authController.logout)
 
-router.get('/profile', authenticateToken, userController.getLoggedInUser);
+router.get('/profile', authenticateToken, userController.getUserProfileById);
 
 router.get('/profile/:userId', authenticateToken, userController.getUserProfileById);
 
