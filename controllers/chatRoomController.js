@@ -68,6 +68,41 @@ exports.getAllChatRooms = async (req, res) => {
     }
 };
 
+// Controller function to get a chat room with its messages and media
+exports.getChatRoom = async (req, res) => {
+    try {
+        const roomId = req.params.roomId; // Assuming roomId is passed as a route parameter
+
+        // Retrieve chat room details with messages and media
+        const result = await chatRoomModel.getChatRoomById(roomId);
+
+        // console.log("result", result);
+
+        // Check the status returned by the model function
+        if (result.status === 200) {
+            // If chat room found, send the response with the chat room data
+            res.status(200).json({
+                status: 200,
+                message: 'Chat room found',
+                chatRoom: result.chatRoom
+            });
+        } else {
+            // If chat room not found or error occurred, send the appropriate error response
+            res.status(result.status).json({
+                status: result.status,
+                error: result.error || 'Failed to retrieve chat room'
+            });
+        }
+    } catch (error) {
+        // Handle internal server error
+        console.error('Error retrieving chat room:', error);
+        res.status(500).json({
+            status: 500,
+            error: 'Internal server error'
+        });
+    }
+};
+
 // update chat room 
 exports.updateChatRoom = async (req, res) => {
     try {

@@ -54,6 +54,36 @@ exports.getAllChatRooms = async () => {
     }
 };
 
+exports.getChatRoomById = async (roomId) => {
+    try {
+        // Get chat room details
+        const roomSql = 'SELECT * FROM chat_rooms WHERE room_id = ?';
+        const [roomRows] = await pool.query(roomSql, [roomId]);
+
+        if (roomRows.length === 0) {
+            return { status: 404, message: 'Chat room not found' };
+        }
+
+        const chatRoom = roomRows[0];
+
+        // Get messages for the chat room
+        const messageSql = 'SELECT * FROM messages WHERE chat_room_id = ? ORDER BY message_id DESC';
+        const [messageRows] = await pool.query(messageSql, [roomId]);
+        chatRoom.messages = messageRows;
+
+        // Get media for the chat room
+        const mediaSql = 'SELECT * FROM media WHERE chat_room_id = ? ORDER BY media_id DESC';
+        const [mediaRows] = await pool.query(mediaSql, [roomId]);
+        chatRoom.media = mediaRows;
+
+        return { status: 200, message: 'Chat room found', chatRoom: chatRoom };
+    } catch (error) {
+        console.error('Error fetching chat room:', error);
+        return { status: 500, error: error.message || 'Internal server error' };
+    }
+};
+
+
 exports.updateChatRoom = async (roomName, roomId) => {
     if (!roomId || !roomName) {
         return { status: 400, error: 'Invalid input parameters' };
@@ -96,23 +126,6 @@ exports.deleteChatRoom = async (roomId) => {
     }
     catch (error) {
         console.error('Error deleting chat room:', error);
-        return { status: 500, error: error.message || 'Internal server error' };
-    }
-}
-
-exports.getChatRoomById = async (roomId) => {
-    try {
-        const sql = 'SELECT * FROM chat_rooms WHERE room_id = ?';
-        const [rows] = await pool.query(sql, [roomId]);
-
-        if (rows.length > 0) {
-            return { status: 200, message: 'Chat room found', room: rows[0] };
-        } else {
-            return { status: 404, message: 'Chat room not found' };
-        }
-
-    } catch (error) {
-        console.error('Error fetching chat room:', error);
         return { status: 500, error: error.message || 'Internal server error' };
     }
 }
