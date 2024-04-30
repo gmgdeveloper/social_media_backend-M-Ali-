@@ -14,6 +14,15 @@ router.put('/updateChatRoom/:roomId', authenticateToken, chatRoomController.upda
 
 router.delete('/deleteChatRoom/:roomId', authenticateToken, chatRoomController.deleteChatRoom);
 
+// Chat routes
 router.post('/:roomId/sendMessage', authenticateToken, chatController.sendMessage);
+
+router.get('/:roomId/getMessages', authenticateToken, chatController.getMessages);
+
+router.get('/:roomId/getMessage/:messageId', authenticateToken, chatController.getMessage);
+
+router.delete('/:roomId/deleteMessage/:messageId', authenticateToken, chatController.deleteMessage);
+
+router.put('/:roomId/updateMessage/:messageId', authenticateToken, chatController.updateMessage);
 
 module.exports = router;

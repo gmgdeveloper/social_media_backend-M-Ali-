@@ -27,11 +27,11 @@ exports.insertMessage = async (chatRoomId, fromUserId, toUserId, content, reply_
             timestamp,
             status,
             reply_to_message_id || null, // Assuming no reply_to_message_id initially
-            null // Assuming no deletion initially
+            0 // Assuming no deletion initially
         ];
 
         const sql = `
-            INSERT INTO messages (chat_room_id, from_user_id, to_user_id, content, timestamp, status, reply_to_message_id, deleted_at)
+            INSERT INTO messages (chat_room_id, from_user_id, to_user_id, content, timestamp, status, reply_to_message_id, is_deleted)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
@@ -45,12 +45,11 @@ exports.insertMessage = async (chatRoomId, fromUserId, toUserId, content, reply_
         }
 
         const messageId = result.insertId;
-        const newMessage = await this.getMessageById(messageId);
 
         return {
-            status: newMessage ? 201 : 500,
-            message: newMessage ? 'Message inserted successfully' : 'Failed to insert message',
-            data: newMessage
+            status: 201,
+            message: 'Message inserted successfully',
+            id: messageId
         };
     } catch (error) {
         console.error('Failed to insert message:', error);
@@ -61,8 +60,7 @@ exports.insertMessage = async (chatRoomId, fromUserId, toUserId, content, reply_
     }
 };
 
-
-exports.uploadToMediaTable = async (chatRoomId, uploaderId, filename, mediaType) => {
+exports.uploadToMediaTable = async (chatRoomId, uploaderId, filename, mediaType, message_id) => {
     try {
         const date = new Date();
         const formattedDate = date.toLocaleString('en-US', {
@@ -77,16 +75,16 @@ exports.uploadToMediaTable = async (chatRoomId, uploaderId, filename, mediaType)
         }).replace(/ GMT\+\d{4} \(.*\)$/, '');
 
         // Get current timestamp
-        const uploadTimestamp = formattedDate
+        const uploadTimestamp = formattedDate;
 
         // Construct the SQL query to insert media information into the media table
         const sql = `
-            INSERT INTO media (chat_room_id, uploader_id, filename, media_type, upload_timestamp)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO media (chat_room_id, uploader_id, filename, media_type, message_id, upload_timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
         `;
 
         // Define the values to be inserted into the media table
-        const values = [chatRoomId, uploaderId, filename, mediaType, uploadTimestamp];
+        const values = [chatRoomId, uploaderId, filename, mediaType, message_id, uploadTimestamp];
 
         // Execute the SQL query
         const [result] = await pool.query(sql, values);
@@ -100,11 +98,10 @@ exports.uploadToMediaTable = async (chatRoomId, uploaderId, filename, mediaType)
             };
         }
 
-        // Return the generated media ID
+        // Return the generated media ID along with the updated message data
         return {
             status: 201,
             message: 'Media inserted successfully',
-            mediaId: result.insertId
         };
     } catch (error) {
         // If an error occurs, return an error response as JSON
@@ -135,17 +132,28 @@ exports.getMessageById = async (messageId) => {
 
         // Fetch associated media
         const mediaSql = `
-            SELECT * FROM media
-            WHERE chat_room_id = ?
+            SELECT *
+            FROM media
+            WHERE message_id = ?
         `;
-        const [mediaRows] = await pool.query(mediaSql, [message.chat_room_id]);
+        const [mediaRows] = await pool.query(mediaSql, [messageId]);
+
+        // Convert mediaRows to a JSON array
+        const media = mediaRows.map(row => ({
+            media_id: row.media_id,
+            uploader_id: row.uploader_id,
+            file_name: row.filename,
+            media_type: row.media_type,
+            message_id: row.message_id,
+            upload_time: row.upload_timestamp
+        }));
 
         return {
             status: 200,
             message: 'Message retrieved successfully',
             data: {
                 message: message,
-                media: mediaRows
+                media: media
             }
         };
     } catch (error) {
@@ -157,3 +165,96 @@ exports.getMessageById = async (messageId) => {
     }
 };
 
+exports.getMessages = async (chatRoomId, userId) => {
+    try {
+        // Fetch messages
+        const messageSql = `
+            SELECT * FROM messages
+            WHERE chat_room_id = ?
+            AND (from_user_id = ? OR to_user_id = ?)
+            ORDER BY message_id DESC
+        `;
+
+        const [messageRows] = await pool.query(messageSql, [chatRoomId, userId, userId]);
+
+        if (messageRows.length === 0) {
+            return {
+                status: 404,
+                message: 'No messages found'
+            };
+        }
+
+        // Fetch media for each message and attach it to the message object
+        for (const message of messageRows) {
+            const mediaSql = 'SELECT * FROM media WHERE message_id = ?';
+            const [mediaRows] = await pool.query(mediaSql, [message.message_id]);
+            message.media = mediaRows;
+        }
+
+        return {
+            status: 200,
+            message: 'Messages retrieved successfully',
+            data: messageRows
+        };
+    } catch (error) {
+        console.error('Failed to get messages:', error);
+        return {
+            status: 500,
+            error: `Failed to get messages: ${error.message}`
+        };
+    }
+};
+
+exports.deleteMessage = async (messageId) => {
+    try {
+        // First, delete associated media
+        const deleteMediaQuery = 'DELETE FROM media WHERE message_id = ?';
+        await pool.query(deleteMediaQuery, [messageId]);
+
+        // Then, delete the message
+        const deleteMessageQuery = 'DELETE FROM messages WHERE message_id = ?';
+        const [result] = await pool.query(deleteMessageQuery, [messageId]);
+
+        if (result.affectedRows > 0) {
+            return { status: 200, message: 'Message deleted successfully' };
+        } else {
+            return { status: 404, message: 'Message not found' };
+        }
+    } catch (error) {
+        console.error('Error deleting message and associated media:', error);
+        return { status: 500, error: error.message || 'Internal server error' };
+    }
+};
+
+exports.updateMessage = async (messageId, newMessage) => {
+    try {
+        messageId = parseInt(messageId);
+        if (!messageId) {
+            const err = {
+                status: 500,
+                message: "Invalid message ID"
+            }
+            return err;
+        }
+
+        if (!newMessage) {
+            const err = {
+                status: 500,
+                message: "Message is required"
+            }
+            return err;
+        }
+
+        const updateMessageQuery = 'UPDATE messages SET content = ? WHERE message_id = ?';
+        const [result] = await pool.query(updateMessageQuery, [newMessage, messageId]);
+
+        if (result.affectedRows > 0) {
+            return { status: 200, message: 'Message updated successfully' };
+        } else {
+            return { status: 404, message: 'Message not found' };
+        }
+    } catch (error) {
+        console.log(error);
+        return { status: 500, error: error.message || 'Internal server error' };
+    }
+}

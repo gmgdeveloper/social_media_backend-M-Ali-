@@ -24,6 +24,10 @@ router.post('/reset-password/', authController.resetPassword);
 
 router.post('/change-password', authenticateToken, authController.changePassword);
 
+router.put('/change-profile-pic', authenticateToken, userController.updateProfilePic);
+
+router.put('/change-cover-pic', authenticateToken, userController.updateCoverPic);
+
 router.post("/logout", authController.logout)
 
 router.get('/profile', authenticateToken, userController.getUserProfileById);
@@ -31,5 +35,6 @@ router.get('/profile', authenticateToken, userController.getUserProfileById);
 router.get('/profile/:userId', authenticateToken, userController.getUserProfileById);
 
 router.get('/suggestedUsers', authenticateToken, userController.getSuggestedUsers);
+
 
 module.exports = router;

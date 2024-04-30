@@ -134,7 +134,7 @@ exports.getFriends = async (req, res) => {
 
         // Check if the response status is 200
         if (friends.status === 200) {
-            return res.status(200).json(friends.friends);
+            return res.status(200).json(friends);
         } else {
             // Handle other status codes (e.g., 404, 500) returned by the model
             return res.status(friends.status).json({ status: friends.status, error: friends.error });

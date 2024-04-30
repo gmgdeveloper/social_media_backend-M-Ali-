@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+	<title>Your Chats</title>
+</head>
+
+<body>
+	<div class="background">
+		<div id="chat" style="padding: 0px 25% 0px 25%; color: rgb(255, 0, 0);">chats...</div>
+	</div>
+
+	<!-- Include Socket.IO client library -->
+	<script src="/socket.io/socket.io.js"></script>
+	<!-- Initialize Socket.IO client -->
+	<script>
+		const socket = io();
+		console.log("hello");
+
+		// Listen for 'newMessage' event
+		socket.on('message', (data) => {
+			console.log('yohhhhh');
+			console.log('New message received:', data);
+			const newMessageDiv = document.createElement('div');
+			newMessageDiv.innerHTML = data.messageId;
+			document.getElementById('chat').appendChild(newMessageDiv);
+		});
+	</script>
+</body>
+
+</html>

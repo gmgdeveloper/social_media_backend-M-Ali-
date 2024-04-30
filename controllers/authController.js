@@ -7,6 +7,11 @@ const Joi = require('joi');
 const env = require("dotenv")
 env.config();
 
+const FRONTEND_PORT = process.env.FRONTEND_PORT
+const FRONTEND_URL = process.env.FRONTEND_URL
+const BASE_URL = process.env.BASE_URL
+const PORT = process.env.PORT
+
 const registerSchema = Joi.object({
     first_name: Joi.string().required(),
     last_name: Joi.string().required(),
@@ -83,8 +88,8 @@ exports.register = async (req, res) => {
 
     const bio = `Hi there, I'm ${full_name}, I created this account on ${new Date().toDateString()}`;
 
-    const profile_picture = "default.jpg";
-    const cover_picture = "default.jpg";
+    const profile_picture = `${BASE_URL}:${PORT}/uploads/profiles/default.jpg`;
+    const cover_picture = `${BASE_URL}:${PORT}/uploads/covers/default.jpg`;
 
     try {
         const existingEmail = await userModel.getUserByField("email", email);
@@ -265,7 +270,7 @@ exports.forgetPassword = async (req, res) => {
             });
         }
 
-        const resetLink = `${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}/reset-password`;
+        const resetLink = `${FRONTEND_URL}:${FRONTEND_PORT}/reset`;
 
         const message = `Hello ${user.first_name},\n\nYou have requested to reset your password. Please follow this link to reset your password: ${resetLink}`;
 
@@ -343,7 +348,7 @@ exports.resetPassword = async (req, res) => {
         const updateUserResult = await userModel.updateUserFields(user.id, { password: hashedPassword, reset_token: null }, 'Password reset successfully');
 
         if (updateUserResult.status === 200) {
-            const msg = `Hello ${user.first_name},\n\nYour password has been reset successfully.`;
+            const msg = `Hello ${user.first_name},\n\nYour password has been reset successfully. You can login here: ${FRONTEND_URL}:${FRONTEND_PORT}`;
             const subject = 'Password Reset Confirmation';
             try {
                 const mail = await sendMail(user.email, subject, msg);

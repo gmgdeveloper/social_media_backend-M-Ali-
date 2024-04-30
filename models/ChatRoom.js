@@ -25,7 +25,6 @@ exports.createChatRoom = async (roomName, user1Id, user2Id) => {
         const values = [roomName, user1Id, user2Id, formattedDate];
         const [result] = await pool.query(sql, values);
 
-
         if (result.affectedRows === 1) {
             const newRoom = await this.getChatRoomById(result.insertId);
             return { status: 201, message: 'Chat room created successfully', room: newRoom.room };
@@ -42,14 +41,14 @@ exports.getAllChatRooms = async () => {
     try {
         const sql = 'SELECT * FROM chat_rooms';
         const [rows] = await pool.query(sql);
-
+        console.log(rows);
         if (rows.length > 0) {
-            return { status: 200, message: 'Chat rooms found', chatRooms: rows };
+            return { status: 200, message: 'Active chat rooms found', chatRooms: rows };
         } else {
-            return { status: 404, message: 'No chat rooms found' };
+            return { status: 404, message: 'No active chat rooms found' };
         }
     } catch (error) {
-        console.error('Error fetching chat rooms:', error);
+        console.error('Error fetching active chat rooms:', error);
         return { status: 500, error: error.message || 'Internal server error' };
     }
 };
@@ -57,7 +56,7 @@ exports.getAllChatRooms = async () => {
 exports.getChatRoomById = async (roomId) => {
     try {
         // Get chat room details
-        const roomSql = 'SELECT * FROM chat_rooms WHERE room_id = ?';
+        const roomSql = 'SELECT * FROM chat_rooms WHERE room_id = ? AND is_deleted <> 1';
         const [roomRows] = await pool.query(roomSql, [roomId]);
 
         if (roomRows.length === 0) {
@@ -66,15 +65,18 @@ exports.getChatRoomById = async (roomId) => {
 
         const chatRoom = roomRows[0];
 
-        // Get messages for the chat room
-        const messageSql = 'SELECT * FROM messages WHERE chat_room_id = ? ORDER BY message_id DESC';
+        // Get messages for the chat room, excluding deleted messages
+        const messageSql = 'SELECT * FROM messages WHERE chat_room_id = ? AND is_deleted <> 1 ORDER BY message_id DESC';
         const [messageRows] = await pool.query(messageSql, [roomId]);
-        chatRoom.messages = messageRows;
 
-        // Get media for the chat room
-        const mediaSql = 'SELECT * FROM media WHERE chat_room_id = ? ORDER BY media_id DESC';
-        const [mediaRows] = await pool.query(mediaSql, [roomId]);
-        chatRoom.media = mediaRows;
+        // Fetch media for each message and attach it to the message object, excluding deleted media
+        for (const message of messageRows) {
+            const mediaSql = 'SELECT * FROM media WHERE message_id = ? AND is_deleted <> 1';
+            const [mediaRows] = await pool.query(mediaSql, [message.message_id]);
+            message.media = mediaRows;
+        }
+
+        chatRoom.messages = messageRows;
 
         return { status: 200, message: 'Chat room found', chatRoom: chatRoom };
     } catch (error) {
@@ -115,24 +117,29 @@ exports.deleteChatRoom = async (roomId) => {
     }
 
     try {
-        const sql = 'DELETE FROM chat_rooms WHERE room_id = ?';
-        const [result] = await pool.query(sql, [roomId]);
+        // Update chat_room table
+        const updateChatRoomSql = 'UPDATE chat_rooms SET is_deleted = 1 WHERE room_id = ?';
+        await pool.query(updateChatRoomSql, [roomId]);
 
-        if (result.affectedRows === 1) {
-            return { status: 200, message: 'Chat room deleted successfully' };
-        } else {
-            return { status: 404, message: 'Something went wrong with database.' };
-        }
+        // Update message table
+        const updateMessageSql = 'UPDATE messages SET is_deleted = 1 WHERE chat_room_id = ?';
+        await pool.query(updateMessageSql, [roomId]);
+
+        // Update media table
+        const updateMediaSql = 'UPDATE media SET is_deleted = 1 WHERE chat_room_id = ?';
+        await pool.query(updateMediaSql, [roomId]);
+
+        return { status: 200, message: 'Chat room and related records marked as deleted successfully' };
     }
     catch (error) {
-        console.error('Error deleting chat room:', error);
+        console.error('Error marking chat room and related records as deleted:', error);
         return { status: 500, error: error.message || 'Internal server error' };
     }
 }
 
 exports.getChatRoomByUsers = async (user1Id, user2Id) => {
     try {
-        const sql = 'SELECT * FROM chat_rooms WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?) LIMIT 1';
+        const sql = 'SELECT * FROM chat_rooms WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)) AND is_deleted <> 1 LIMIT 1';
         const [rows] = await pool.query(sql, [user1Id, user2Id, user2Id, user1Id]);
 
         if (rows.length > 0) {

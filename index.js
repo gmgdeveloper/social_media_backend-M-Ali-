@@ -1,12 +1,12 @@
+// index.js
 const express = require("express");
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
 const db = require('./config/db');
 const env = require('dotenv');
-const cors = require('cors');
-
 env.config();
+const cors = require('cors');
+const setupSocket = require('./helpers/socket');
 
 const userRoutes = require("./routes/userRoutes");
 const postRoutes = require("./routes/postRoutes");
@@ -21,27 +21,21 @@ app.use(express.json());
 app.use(express.static("public"));
 app.use(cors());
 
+app.get('/chat', (req, res) => {
+    res.sendFile(__dirname + '/public/html/chats.html');
+})
+
 app.use("/", postRoutes);
 app.use("/api", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/likes", likeRoutes);
-app.use("/api/comments", commentRoutes);
 app.use("/api/follows", followRoutes);
-app.use("/api/chatRooms", chatRoomRoutes);
 app.use("/api/gallery", galleryRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/chatRooms", chatRoomRoutes);
 
-io.on('connection', (socket) => {
-    console.log('A user connected');
-
-    socket.on('message', (msg) => {
-        console.log('Received message:', msg);
-        io.emit('message', msg);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
-    });
-});
+// Initialize io using setupSocket function
+const io = setupSocket(http);
 
 const PORT = process.env.PORT || 8080;
 const BASE_URL = process.env.BASE_URL;

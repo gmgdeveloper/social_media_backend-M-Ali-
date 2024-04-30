@@ -6,6 +6,10 @@ const path = require('path');
 const env = require('dotenv');
 env.config()
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost';
+const PORT = process.env.PORT || 8000;
+
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         if (file.fieldname === 'profile') {
@@ -39,6 +43,23 @@ const uploadProfileAndCover = multer({
         checkFileType(file, cb);
     }
 }).fields([{ name: 'profile', maxCount: 1 }, { name: 'cover', maxCount: 1 }]);
+
+
+const uploadProfilePic = multer({
+    storage: storage,
+    limits: { fileSize: 10000000 },
+    fileFilter: function (req, file, cb) {
+        checkFileType(file, cb);
+    }
+}).single('profile');
+
+const uploadCoverPic = multer({
+    storage: storage,
+    limits: { fileSize: 10000000 },
+    fileFilter: function (req, file, cb) {
+        checkFileType(file, cb);
+    }
+}).single('cover');
 
 exports.getAllUsers = async (req, res) => {
     try {
@@ -138,7 +159,7 @@ exports.getSuggestedUsers = async (req, res) => {
             return res.status(200).json({
                 status: 200,
                 message: 'Recent users fetched successfully',
-                recentUsers: filteredRecentUsers
+                suggestedUsers: filteredRecentUsers
             });
         }
 
@@ -172,22 +193,26 @@ exports.getSuggestedUsers = async (req, res) => {
             }
         }
 
+        suggestedUsersWithMutual.filter()
+
         const loggedInUserData = await userModel.getUserData(userId);
 
-        if (loggedInUserData.status == 200 && suggestedUsersWithMutual.length !== 0) {
+        if (suggestedUsersWithMutual.length !== 0) {
             return res.status(200).json({
                 status: 200,
                 message: 'Suggested users fetched successfully',
                 loggedInUser: loggedInUserData.user,
                 suggestedUsers: suggestedUsersWithMutual
             });
-        } else {
+        }
+
+        if (loggedInUserData.status == 200) {
             const recentUsers = await userModel.getRecentUsers(userLimit);
             const filteredRecentUsers = recentUsers.filter(user => user.id !== userId && !followingIds.includes(user.id));
             return res.status(200).json({
                 status: 200,
                 message: 'Recent users fetched successfully',
-                recentUsers: filteredRecentUsers
+                suggestedUsers: filteredRecentUsers
             });
         }
     } catch (error) {
@@ -275,9 +300,6 @@ exports.stepThree = async (req, res) => {
 
             const userId = req.user.id;
 
-            const BASE_URL = process.env.BASE_URL || 'http://localhost';
-            const PORT = process.env.PORT || 8000;
-
             const profileImagePath = `${BASE_URL}:${PORT}/uploads/profiles/${req.files['profile'][0].filename}`;
             const coverImagePath = `${BASE_URL}:${PORT}/uploads/covers/${req.files['cover'][0].filename}`;
 
@@ -304,6 +326,118 @@ exports.stepThree = async (req, res) => {
 
         } catch (error) {
             console.error('Error uploading profile and cover images:', error.message);
+            res.status(500).json({
+                status: 500,
+                error: `Internal server error: ${error.message}`
+            });
+        }
+    });
+};
+
+exports.updateProfilePic = async (req, res) => {
+    uploadProfilePic(req, res, async (err) => {
+        try {
+            if (err instanceof multer.MulterError) {
+                console.log(err);
+                return res.status(400).json({
+                    status: 400,
+                    error: 'Multer error: ' + err.message
+                });
+            } else if (err) {
+                console.log(err);
+                return res.status(500).json({
+                    status: 500,
+                    error: 'Internal server error: ' + err
+                });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({
+                    status: 400,
+                    error: 'Profile image is required'
+                });
+            }
+
+            const userId = req.user.id;
+
+            // Construct the profile image path
+            const profileImagePath = `${BASE_URL}:${PORT}/uploads/profiles/${req.file.filename}`;
+
+            // Update user's profile picture in the database
+            const updatedUser = await userModel.updateUserFields(userId, {
+                profile_picture: profileImagePath
+            }, "Profile picture updated successfully");
+
+            if (updatedUser.status === 200) {
+                res.status(updatedUser.status).json({
+                    status: updatedUser.status,
+                    message: updatedUser.message,
+                    user: updatedUser.data
+                });
+            } else {
+                res.status(updatedUser.status).json({
+                    status: updatedUser.status,
+                    error: updatedUser.message,
+                });
+            }
+        } catch (error) {
+            console.error('Error updating profile picture:', error.message);
+            res.status(500).json({
+                status: 500,
+                error: `Internal server error: ${error.message}`
+            });
+        }
+    });
+};
+
+exports.updateCoverPic = async (req, res) => {
+    uploadCoverPic(req, res, async (err) => {
+        try {
+            if (err instanceof multer.MulterError) {
+                console.log(err);
+                return res.status(400).json({
+                    status: 400,
+                    error: 'Multer error: ' + err.message
+                });
+            } else if (err) {
+                console.log(err);
+                return res.status(500).json({
+                    status: 500,
+                    error: 'Internal server error: ' + err
+                });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({
+                    status: 400,
+                    error: 'Cover image is required'
+                });
+            }
+
+            const userId = req.user.id;
+
+            // Construct the cover image path
+            const coverImagePath = `${BASE_URL}:${PORT}/uploads/covers/${req.file.filename}`;
+
+            // Update user's cover picture in the database
+            const updatedUser = await userModel.updateUserFields(userId, {
+                cover_picture: coverImagePath
+            }, "Cover picture updated successfully");
+
+            if (updatedUser.status === 200) {
+                res.status(updatedUser.status).json({
+                    status: updatedUser.status,
+                    message: updatedUser.message,
+                    user: updatedUser.data
+                });
+            } else {
+                res.status(updatedUser.status).json({
+                    status: updatedUser.status,
+                    error: updatedUser.message,
+                });
+            }
+        } catch (error) {
+            console.error('Error updating cover picture:', error.message);
             res.status(500).json({
                 status: 500,
                 error: `Internal server error: ${error.message}`
