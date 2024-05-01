@@ -12,6 +12,8 @@
 <body>
 	<div class="background">
 		<div id="chat" style="padding: 0px 25% 0px 25%; color: rgb(255, 0, 0);">chats...</div>
+		<input type="text" id="messageInput" placeholder="Enter your message">
+		<button onclick="sendMessage()">Send</button>
 	</div>
 
 	<!-- Include Socket.IO client library -->
@@ -21,12 +23,22 @@
 		const socket = io();
 		console.log("hello");
 
-		// Listen for 'newMessage' event
-		socket.on('message', (data) => {
-			console.log('yohhhhh');
-			console.log('New message received:', data);
+		// Function to send a message
+		function sendMessage() {
+			const messageInput = document.getElementById('messageInput');
+			const message = messageInput.value;
+			if (message.trim() !== '') {
+				socket.emit('sendMessage', message); // Emitting the sendMessage event with the message content
+				messageInput.value = '';
+			}
+		}
+
+
+		// Listen for 'receiveMessage' event
+		socket.on('receiveMessage', (message) => {
+			console.log('New message received:', message);
 			const newMessageDiv = document.createElement('div');
-			newMessageDiv.innerHTML = data.messageId;
+			newMessageDiv.textContent = message;
 			document.getElementById('chat').appendChild(newMessageDiv);
 		});
 	</script>

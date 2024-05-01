@@ -220,19 +220,16 @@ exports.updatePostById = async (req, res) => {
                 }
 
                 const { caption } = req.body;
-
-                const updateFields = {};
-
-                if (caption !== undefined && caption !== "") {
-                    updateFields.caption = caption;
-                }
+                let media = [];
 
                 if (req.files && req.files.length > 0) {
-                    updateFields.media = req.files.map(file => file.filename);
-                } else if (req.file) {
-                    updateFields.media = req.file.filename;
+                    media = req.files.map(file => {
+                        const mediaType = file.mimetype.startsWith('image') ? 'images' : 'videos';
+                        return `${baseUrl}:${port}/uploads/posts/${mediaType}/${file.filename}`;
+                    });
                 }
 
+                const updateFields = { caption, media };
 
                 const updatedPost = await postModel.updatePost(postId, updateFields);
 
@@ -248,8 +245,6 @@ exports.updatePostById = async (req, res) => {
                         error: updatedPost.message || 'Internal server error'
                     });
                 }
-
-
             });
         }
     } catch (error) {
@@ -260,6 +255,7 @@ exports.updatePostById = async (req, res) => {
         });
     }
 }
+
 
 exports.deletePostById = async (req, res) => {
     try {
